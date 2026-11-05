@@ -1,0 +1,165 @@
+/* Caisse T.B.T.B — logique de l'application
+   Mode téléphone : le reçu est généré en PDF (partage / téléchargement).
+   Mode TPE Sunmi : l'appli Android expose window.SunmiPrinter et le ticket s'imprime directement. */
+const $ = id => document.getElementById(id);
+const { fmt, showDate, lettres, ticketPDF } = window.TBTB;
+const KEY = 'tbtb_recus_v1';
+const pad = n => String(n).padStart(2, '0');
+const toLocalInput = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/* Téléphone sénégalais : 9 chiffres, +221 facultatif → « 77 123 45 67 » */
+const telDigits = s => { let d = String(s).replace(/\D/g, ''); if (d.startsWith('221') && d.length > 9) d = d.slice(3); return d.slice(0, 9); };
+const telFmt = s => { const d = telDigits(s); return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' '); };
+const SUNMI = !!(window.SunmiPrinter && window.SunmiPrinter.print);
+
+$('mode').textContent = SUNMI ? 'Impression TPE' : 'Reçus en PDF';
+$('btn-submit').textContent = SUNMI ? 'Valider et imprimer' : 'Valider et créer le PDF';
+
+/* Stockage local (sur l'appareil) */
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(v)) return v; } catch (e) {} return []; }
+let recus = load();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(recus)); } catch (e) {} }
+function nextNum() { const max = recus.reduce((m, r) => Math.max(m, parseInt(r.num.split('-')[1]) || 0), 0); return 'TBTB-' + String(max + 1).padStart(6, '0'); }
+
+/* Signature */
+const cv = $('sig'), ctx = cv.getContext('2d'); let drawing = false, signed = false;
+function sizeCanvas() {
+  const r = cv.getBoundingClientRect(); if (!r.width) return;
+  const dpr = window.devicePixelRatio || 1; const img = signed ? cv.toDataURL() : null;
+  cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+  if (img) { const i = new Image(); i.onload = () => ctx.drawImage(i, 0, 0, r.width, r.height); i.src = img; }
+}
+const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+cv.addEventListener('pointerdown', e => { drawing = true; cv.setPointerCapture(e.pointerId); const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); });
+cv.addEventListener('pointermove', e => { if (!drawing) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); signed = true; });
+const end = () => { if (drawing) { drawing = false; render(); } };
+cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+function clearSig() { ctx.clearRect(0, 0, cv.width, cv.height); signed = false; render(); }
+$('sig-clear').onclick = clearSig;
+
+/* Signature sur fond blanc (pour PDF et imprimante) */
+function sigImage() {
+  if (!signed) return null;
+  const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(cv, 0, 0);
+  return c.toDataURL('image/png');
+}
+
+/* Aperçu écran */
+const truck = `<svg viewBox="0 0 64 36" aria-hidden="true"><rect x="1" y="4" width="38" height="22" fill="#111"/><path d="M41 10h12l9 9v7H41z" fill="#111"/><rect x="45" y="13" width="7" height="6" fill="#fff"/><circle cx="12" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/><circle cx="51" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/></svg>`;
+function ticketHTML(r) {
+  const E = window.TBTB.ENTREPRISE, s = Number(r.somme) || 0;
+  return `<div class="t-c"><div class="t-logo">${truck}<span class="t-name">${E.sigle}</span></div>
+    <div class="t-sub">${E.nom}</div><div class="t-djily">${E.gerant}</div>
+    <div class="t-sub">${E.tel}</div><div class="t-sub">${E.lignes}</div><div class="t-sub">${E.info}</div><div class="t-sub">${E.adresse}</div></div>
+  <hr class="t-hr"><div class="t-c t-title">Reçu de paiement</div>
+  <div class="t-line"><span>N°</span><b>${esc(r.num)}</b></div>
+  <div class="t-line"><span>Date</span><b>${esc(showDate(r.date))}</b></div><hr class="t-hr">
+  <div class="t-line"><span>Nom</span><b>${esc(r.nom || '—')}</b></div>
+  <div class="t-line"><span>Destination</span><b>${esc(r.dest || '—')}</b></div>
+  <div class="t-line"><span>Tél. dest.</span><b>${esc(r.tel || '—')}</b></div>
+  <div class="t-line"><span>Colis</span><b>${esc(r.colis || '—')}</b></div><hr class="t-hr">
+  <div class="t-line t-total"><span>Somme</span><b>${fmt(s)} F CFA</b></div>
+  ${s ? `<div class="t-words">Arrêté à la somme de ${lettres(s)} francs CFA.</div>` : ''}
+  <div class="t-sig"><div>Signature :</div>${r.sig ? `<img alt="Signature" src="${r.sig}">` : '<div class="empty"></div>'}</div>
+  <div class="t-c t-foot">Merci de votre confiance.<br>Conservez ce reçu pour retirer vos colis.</div>`;
+}
+function current() {
+  return { num: $('f-num').value, date: $('f-date').value, nom: $('f-nom').value.trim(), dest: $('f-dest').value.trim(), tel: telFmt($('f-tel').value), colis: $('f-colis').value.trim(),
+    somme: parseInt($('f-somme').value.replace(/\D/g, '')) || 0, sig: sigImage() };
+}
+function render() {
+  const r = current(); $('ticket').innerHTML = ticketHTML(r);
+  $('f-words').textContent = r.somme ? lettres(r.somme) + ' francs CFA' : '';
+}
+
+/* Sortie : imprimante Sunmi ou PDF */
+const payload = r => JSON.stringify(Object.assign({}, r, { entreprise: window.TBTB.ENTREPRISE, dateTxt: showDate(r.date), sommeTxt: fmt(r.somme), lettres: lettres(r.somme) }));
+let lastUrl = null, lastFile = null;
+function makePDF(r) {
+  const doc = ticketPDF(window.jspdf.jsPDF, r);
+  const blob = doc.output('blob');
+  const name = `Recu-${r.num}.pdf`;
+  if (lastUrl) URL.revokeObjectURL(lastUrl);
+  lastUrl = URL.createObjectURL(blob);
+  lastFile = new File([blob], name, { type: 'application/pdf' });
+  $('btn-dl').href = lastUrl; $('btn-dl').download = name;
+  const canShare = navigator.canShare && navigator.canShare({ files: [lastFile] });
+  $('btn-share').hidden = !canShare;
+}
+function output(r) {
+  if (SUNMI) {
+    let res = 'ok';
+    try { res = window.SunmiPrinter.print(payload(r)); } catch (e) { res = String(e); }
+    return res === 'ok' ? `Reçu ${r.num} imprimé.` : `Reçu ${r.num} enregistré, mais l'impression a échoué : ${res}`;
+  }
+  lastRecu = r; makePDF(r); return `Reçu ${r.num} prêt : imprimez-le ou partagez le PDF.`;
+}
+function printTicket(r) {
+  $('print-area').innerHTML = '<div class="ticket">' + ticketHTML(r) + '</div>';
+  setTimeout(() => window.print(), 50);
+}
+let lastRecu = null;
+$('btn-print').onclick = () => { if (lastRecu) printTicket(lastRecu); };
+$('btn-share').onclick = async () => {
+  if (!lastFile) return;
+  try { await navigator.share({ files: [lastFile], title: lastFile.name }); } catch (e) {}
+};
+
+/* Formulaire */
+function resetForm() {
+  $('f-num').value = nextNum(); $('f-date').value = toLocalInput(new Date());
+  $('f-nom').value = ''; $('f-dest').value = ''; $('f-tel').value = ''; $('f-colis').value = ''; $('f-somme').value = '';
+  clearSig(); $('msg').hidden = true; $('done').hidden = true; render(); $('f-nom').focus();
+}
+['f-date', 'f-nom', 'f-dest', 'f-colis'].forEach(id => $(id).addEventListener('input', render));
+$('f-tel').addEventListener('input', e => { e.target.value = telFmt(e.target.value); render(); });
+$('f-somme').addEventListener('input', e => { const n = e.target.value.replace(/\D/g, ''); e.target.value = n ? fmt(n) : ''; render(); });
+$('reset').onclick = resetForm;
+$('form').addEventListener('submit', e => {
+  e.preventDefault(); const r = current(), m = $('msg');
+  const missing = []; if (!r.nom) missing.push('le nom'); if (!r.dest) missing.push('la destination'); if (telDigits(r.tel).length !== 9) missing.push('le téléphone du destinataire (9 chiffres)'); if (!r.colis) missing.push('les colis'); if (!r.somme) missing.push('la somme');
+  if (missing.length) { m.className = 'msg err'; m.textContent = 'Renseignez ' + missing.join(', ') + ' avant de valider.'; m.hidden = false; return; }
+  if (recus.some(x => x.num === r.num)) { m.className = 'msg err'; m.textContent = 'Ce reçu est déjà enregistré. Appuyez sur « Nouveau ».'; m.hidden = false; return; }
+  m.hidden = true;
+  recus.unshift(r); save(); renderHist();
+  $('done-text').textContent = output(r);
+  $('done').hidden = SUNMI;
+  if (SUNMI) { m.className = 'msg ok'; m.textContent = $('done-text').textContent; m.hidden = false; }
+});
+
+/* Historique */
+function renderHist() {
+  const today = new Date().toDateString();
+  const t = recus.filter(r => new Date(r.date).toDateString() === today);
+  $('s-count').textContent = t.length;
+  $('s-total').textContent = fmt(t.reduce((s, r) => s + r.somme, 0)) + ' F';
+  $('s-colis').textContent = t.reduce((s, r) => s + (parseInt(r.colis) || 0), 0);
+  $('h-body').innerHTML = recus.length ? recus.map((r, i) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${SUNMI ? `<button class="mini" data-i="${i}" data-a="pdf">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`}</td></tr>`).join('')
+    : '<tr><td colspan="8" style="color:var(--muted)">Aucun reçu pour l\'instant. Les reçus validés apparaîtront ici.</td></tr>';
+}
+$('h-body').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  const r = recus[+b.dataset.i];
+  if (SUNMI) { window.SunmiPrinter.print(payload(r)); return; }
+  if (b.dataset.a === 'print') { printTicket(r); return; }
+  makePDF(r);
+  if (navigator.canShare && navigator.canShare({ files: [lastFile] })) { try { await navigator.share({ files: [lastFile], title: lastFile.name }); return; } catch (err) { return; } }
+  const a = document.createElement('a'); a.href = lastUrl; a.download = lastFile.name; document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* Onglets */
+function tab(which) {
+  const isNew = which === 'new';
+  $('tab-new').setAttribute('aria-selected', isNew); $('tab-hist').setAttribute('aria-selected', !isNew);
+  $('view-new').hidden = !isNew; $('view-hist').hidden = isNew;
+  if (isNew) sizeCanvas(); else renderHist();
+}
+$('tab-new').onclick = () => tab('new'); $('tab-hist').onclick = () => tab('hist');
+window.addEventListener('resize', sizeCanvas);
+
+/* Installation hors ligne (téléphone) */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+sizeCanvas(); resetForm(); renderHist();

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caisse T.B.T.B</title>
+<meta name="theme-color" content="#1f3fae">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="mark">T.B.T.B</div>
+      <div>
+        <h1>Touba Bakhdad Transport Bagage</h1>
+        <p>Caisse — reçus de paiement · <span class="mode" id="mode"></span></p>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button id="tab-new" role="tab" aria-selected="true">Nouveau reçu</button>
+      <button id="tab-hist" role="tab" aria-selected="false">Historique</button>
+    </div>
+  </header>
+
+  <section id="view-new" class="grid">
+    <form class="panel" id="form" novalidate>
+      <h2>Reçu de paiement</h2>
+      <div class="row">
+        <label>Date<input id="f-date" type="datetime-local"></label>
+        <label>N° de reçu<input id="f-num" type="text" readonly></label>
+      </div>
+      <label>Nom du client<input id="f-nom" type="text" autocomplete="off" placeholder="Ex. Moussa Ndiaye"></label>
+      <div class="row">
+        <label>Destination<input id="f-dest" type="text" list="destinations" autocomplete="off" placeholder="Ex. Touba"></label>
+        <label>Tél. du destinataire<input id="f-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="77 123 45 67"></label>
+      </div>
+      <datalist id="destinations"><option value="Dakar"><option value="Touba"><option value="Ourossogui"><option value="Bakel"><option value="Kidira"></datalist>
+      <div class="row">
+        <label>Colis<input id="f-colis" type="text" autocomplete="off" placeholder="Ex. 3 cartons"></label>
+        <label class="amount">Somme<input id="f-somme" type="text" inputmode="numeric" placeholder="0"><span>F CFA</span></label>
+      </div>
+      <div class="words" id="f-words"></div>
+      <div class="sig-box">
+        <div class="sig-head">
+          <label for="sig" style="flex-direction:row">Signature</label>
+          <button type="button" class="link" id="sig-clear">Effacer</button>
+        </div>
+        <canvas id="sig" tabindex="0" aria-label="Zone de signature"></canvas>
+      </div>
+      <div id="msg" class="msg" hidden></div>
+      <div id="done" class="done" hidden>
+        <p id="done-text"></p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="btn-print">Imprimer</button>
+          <button class="btn ghost" type="button" id="btn-share">Partager (WhatsApp…)</button>
+          <a class="btn ghost" id="btn-dl" href="#" download>Télécharger le PDF</a>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="btn-submit">Valider</button>
+        <button class="btn ghost" type="button" id="reset">Nouveau</button>
+      </div>
+    </form>
+
+    <div class="preview">
+      <span class="cap">Aperçu ticket 58 mm</span>
+      <div class="ticket" id="ticket"></div>
+    </div>
+  </section>
+
+  <section id="view-hist" hidden>
+    <div class="wrap" style="gap:14px">
+      <div class="stats">
+        <div class="stat"><small>Reçus aujourd'hui</small><strong id="s-count">0</strong></div>
+        <div class="stat"><small>Caisse du jour</small><strong id="s-total">0 F</strong></div>
+        <div class="stat"><small>Colis du jour</small><strong id="s-colis">0</strong></div>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>N°</th><th>Date</th><th>Nom</th><th>Destination</th><th>Tél. destinataire</th><th>Colis</th><th style="text-align:right">Somme</th><th></th></tr></thead>
+          <tbody id="h-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="print-area" aria-hidden="true"></div>
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="ticket-pdf.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

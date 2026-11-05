@@ -1,0 +1,35 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'sn.xelkoom.tbtb'
+    compileSdk 34
+    defaultConfig {
+        applicationId "sn.xelkoom.tbtb"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    // L'interface web (dossier ../web) est embarquée dans l'APK : fonctionne sans internet
+    sourceSets { main { assets.srcDirs = ['src/main/assets', '../../build-assets'] } }
+}
+
+// Copie automatique de ../web vers les assets (www/) avant chaque build
+tasks.register('copyWeb', Copy) {
+    from '../../web'
+    into '../../build-assets/www'
+}
+preBuild.dependsOn copyWeb
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    // SDK officiel de l'imprimante intégrée Sunmi (V2s, V2 Pro, P2…)
+    implementation 'com.sunmi:printerlibrary:1.0.18'
+}
