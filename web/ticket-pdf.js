@@ -99,12 +99,8 @@
     dash();
     pair('Somme', fmt(r.somme) + ' F CFA', 11, 'bold');
     if (r.somme) { y += 0.8; font(7, 'italic'); doc.splitTextToSize('Arrêté à la somme de ' + lettres(r.somme) + ' francs CFA.', CW).forEach(l => { if (draw) doc.text(l, M, y + lh(7) * 0.75); y += lh(7); }); }
-    y += 2;
-    font(8); if (draw) doc.text('Signature :', M, y + lh(8) * 0.75); y += lh(8) + 0.5;
-    if (r.sig && draw) { try { doc.addImage(r.sig, 'PNG', M, y, CW, 14, undefined, 'FAST'); } catch (e) {} }
-    y += 14;
-    if (draw) { doc.setLineWidth(0.2); doc.line(M, y, W - M, y); }
-    y += 3;
+    dash();
+    y += 1;
     center(ENTREPRISE.slogan, 7, 'bold');
     center('Merci de votre confiance.', 7);
     center('Conservez ce reçu pour retirer vos colis.', 7);

@@ -21,31 +21,6 @@ let recus = load();
 function save() { try { localStorage.setItem(KEY, JSON.stringify(recus)); } catch (e) {} }
 function nextNum() { const max = recus.reduce((m, r) => Math.max(m, parseInt(r.num.split('-')[1]) || 0), 0); return 'TBTB-' + String(max + 1).padStart(6, '0'); }
 
-/* Signature */
-const cv = $('sig'), ctx = cv.getContext('2d'); let drawing = false, signed = false;
-function sizeCanvas() {
-  const r = cv.getBoundingClientRect(); if (!r.width) return;
-  const dpr = window.devicePixelRatio || 1; const img = signed ? cv.toDataURL() : null;
-  cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
-  if (img) { const i = new Image(); i.onload = () => ctx.drawImage(i, 0, 0, r.width, r.height); i.src = img; }
-}
-const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-cv.addEventListener('pointerdown', e => { drawing = true; cv.setPointerCapture(e.pointerId); const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); });
-cv.addEventListener('pointermove', e => { if (!drawing) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); signed = true; });
-const end = () => { if (drawing) { drawing = false; render(); } };
-cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
-function clearSig() { ctx.clearRect(0, 0, cv.width, cv.height); signed = false; render(); }
-$('sig-clear').onclick = clearSig;
-
-/* Signature sur fond blanc (pour PDF et imprimante) */
-function sigImage() {
-  if (!signed) return null;
-  const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height;
-  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(cv, 0, 0);
-  return c.toDataURL('image/png');
-}
-
 /* Aperçu écran */
 const truck = `<svg viewBox="0 0 64 36" aria-hidden="true"><rect x="1" y="4" width="38" height="22" fill="#111"/><path d="M41 10h12l9 9v7H41z" fill="#111"/><rect x="45" y="13" width="7" height="6" fill="#fff"/><circle cx="12" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/><circle cx="51" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/></svg>`;
 function ticketHTML(r) {
@@ -62,12 +37,11 @@ function ticketHTML(r) {
   <div class="t-line"><span>Colis</span><b>${esc(r.colis || '—')}</b></div><hr class="t-hr">
   <div class="t-line t-total"><span>Somme</span><b>${fmt(s)} F CFA</b></div>
   ${s ? `<div class="t-words">Arrêté à la somme de ${lettres(s)} francs CFA.</div>` : ''}
-  <div class="t-sig"><div>Signature :</div>${r.sig ? `<img alt="Signature" src="${r.sig}">` : '<div class="empty"></div>'}</div>
   <div class="t-c t-foot"><b>${E.slogan}</b><br>Merci de votre confiance.<br>Conservez ce reçu pour retirer vos colis.</div>`;
 }
 function current() {
   return { num: $('f-num').value, date: $('f-date').value, nom: $('f-nom').value.trim(), dest: $('f-dest').value.trim(), tel: telFmt($('f-tel').value), colis: $('f-colis').value.trim(),
-    somme: parseInt($('f-somme').value.replace(/\D/g, '')) || 0, sig: sigImage() };
+    somme: parseInt($('f-somme').value.replace(/\D/g, '')) || 0 };
 }
 function render() {
   const r = current(); $('ticket').innerHTML = ticketHTML(r);
@@ -111,7 +85,7 @@ $('btn-share').onclick = async () => {
 function resetForm() {
   $('f-num').value = nextNum(); $('f-date').value = toLocalInput(new Date());
   $('f-nom').value = ''; $('f-dest').value = ''; $('f-tel').value = ''; $('f-colis').value = ''; $('f-somme').value = '';
-  clearSig(); $('msg').hidden = true; $('done').hidden = true; render(); $('f-nom').focus();
+  $('msg').hidden = true; $('done').hidden = true; render(); $('f-nom').focus();
 }
 ['f-date', 'f-nom', 'f-dest', 'f-colis'].forEach(id => $(id).addEventListener('input', render));
 $('f-tel').addEventListener('input', e => { e.target.value = telFmt(e.target.value); render(); });
@@ -154,10 +128,9 @@ function tab(which) {
   const isNew = which === 'new';
   $('tab-new').setAttribute('aria-selected', isNew); $('tab-hist').setAttribute('aria-selected', !isNew);
   $('view-new').hidden = !isNew; $('view-hist').hidden = isNew;
-  if (isNew) sizeCanvas(); else renderHist();
+  if (!isNew) renderHist();
 }
 $('tab-new').onclick = () => tab('new'); $('tab-hist').onclick = () => tab('hist');
-window.addEventListener('resize', sizeCanvas);
 
 /* Installation hors ligne (téléphone) */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -168,4 +141,4 @@ fetch('assets/logo-ticket.jpg').then(r => r.ok ? r.blob() : null).then(b => {
   fr.onload = () => { window.TBTB_LOGO = fr.result; render(); }; fr.readAsDataURL(b);
 }).catch(() => {});
 
-sizeCanvas(); resetForm(); renderHist();
+resetForm(); renderHist();

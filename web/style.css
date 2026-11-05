@@ -39,9 +39,6 @@ input:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid 
 .amount input{padding-right:52px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .amount span{position:absolute;right:12px;bottom:11px;font:600 13px var(--f-mono);color:var(--muted)}
 .words{font-size:13px;color:var(--muted);min-height:1.2em}
-.sig-box{display:flex;flex-direction:column;gap:6px}
-.sig-head{display:flex;justify-content:space-between;align-items:center}
-canvas#sig{width:100%;height:120px;background:var(--bg);border:1px dashed var(--line);border-radius:8px;touch-action:none;cursor:crosshair}
 .link{background:none;border:0;color:var(--brand);font:600 13px var(--f-body);cursor:pointer;padding:0}
 .actions{display:flex;gap:10px;flex-wrap:wrap}
 .btn{border:0;border-radius:8px;padding:12px 18px;font:600 15px var(--f-body);cursor:pointer}
@@ -69,9 +66,6 @@ canvas#sig{width:100%;height:120px;background:var(--bg);border:1px dashed var(--
 .t-line b{font-weight:600;text-align:right;overflow-wrap:anywhere}
 .t-total{font-size:15px;font-weight:600;margin-top:4px}
 .t-words{font-size:10px;font-style:italic;margin-top:4px}
-.t-sig{margin-top:10px}
-.t-sig img{display:block;width:100%;height:64px;object-fit:contain;border-bottom:1px solid var(--ink)}
-.t-sig .empty{height:64px;border-bottom:1px solid var(--ink)}
 .t-foot{font-size:9.5px;margin-top:10px}
 /* Historique */
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}

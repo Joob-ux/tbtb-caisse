@@ -95,12 +95,6 @@ public class PrinterBridge {
             p.setFontSize(18, null);
             p.printText("Arrêté à la somme de " + r.optString("lettres") + " francs CFA.\n\n", null);
 
-            // Signature
-            p.setFontSize(22, null);
-            p.printText("Signature :\n", null);
-            Bitmap sig = decode(r.optString("sig", ""));
-            if (sig != null) { p.setAlignment(1, null); p.printBitmap(sig, null); p.lineWrap(1, null); }
-            else p.lineWrap(3, null);
             p.setAlignment(0, null);
             p.printText("--------------------------------\n", null);
 

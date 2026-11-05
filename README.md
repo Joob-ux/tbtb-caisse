@@ -1,6 +1,6 @@
 # Caisse T.B.T.B — Touba Bakhdaté Transport Logistique
 
-Application de reçus de transport (Date, Nom, Colis, Somme, Signature).
+Application de reçus de transport (Date, Nom, Destination, Téléphone, Colis, Somme).
 Le même code sert pour deux usages :
 
 | Étape | Appareil | Sortie du reçu |
@@ -15,7 +15,7 @@ L'appli détecte seule où elle tourne : sur le Sunmi, le bouton devient « Vali
 ```
 web/        Application (HTML/JS) : installable sur téléphone, fonctionne hors ligne
   ticket-pdf.js   Mise en page du ticket + infos de l'entreprise (à modifier ici)
-  app.js          Formulaire, signature, historique, PDF / impression
+  app.js          Formulaire, historique, PDF / impression
 android/    Projet Android Studio pour le Sunmi V2s (embarque le dossier web/)
 ```
 
@@ -43,7 +43,7 @@ Prérequis : Android Studio (JDK 17).
 4. Installer l'APK sur le Sunmi (câble USB ou clé USB, autoriser « sources inconnues »).
 
 Le pont `PrinterBridge.java` expose `window.SunmiPrinter.print(json)` à l'interface web :
-en-tête, détails en deux colonnes, montant en lettres, signature en image, sur papier 58 mm (384 points).
+en-tête, détails en deux colonnes, montant en lettres, sur papier 58 mm (384 points).
 
 > Le projet Android n'a pas encore été compilé ni testé sur un vrai Sunmi : faire un premier essai d'impression et ajuster les tailles de police dans `PrinterBridge.java` si besoin.
 
