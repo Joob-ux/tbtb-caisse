@@ -19,6 +19,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:12px}
+.brand .logo{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none}
 .brand .mark{background:var(--brand);color:var(--brand-ink);font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:.06em;padding:6px 10px;border-radius:6px}
 .brand h1{margin:0;font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1.1;text-wrap:balance}
 .brand p{margin:0;color:var(--muted);font-size:13px}
@@ -58,6 +59,7 @@ canvas#sig{width:100%;height:120px;background:var(--bg);border:1px dashed var(--
 .t-c{text-align:center}
 .t-logo{display:flex;justify-content:center;align-items:center;gap:8px}
 .t-logo svg{width:38px;height:auto}
+.t-img{width:84px;height:84px;border-radius:50%;object-fit:cover}
 .t-name{font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.12em;line-height:1}
 .t-sub{font-size:10px;letter-spacing:.02em}
 .t-djily{font-family:var(--f-display);font-weight:800;font-size:16px;letter-spacing:.08em;margin-top:2px}
@@ -103,3 +105,5 @@ a.btn{text-decoration:none;text-align:center}
   #print-area{display:block!important}
   #print-area .ticket{width:58mm;max-width:none;box-shadow:none;border:0;-webkit-mask:none;mask:none;padding:3mm 2mm 6mm;font-size:9pt}
 }
+
+[hidden]{display:none!important}

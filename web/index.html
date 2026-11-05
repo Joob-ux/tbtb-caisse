@@ -15,10 +15,10 @@
 <div class="wrap">
   <header>
     <div class="brand">
-      <div class="mark">T.B.T.B</div>
+      <img class="logo" src="assets/logo-ticket.jpg" alt="Logo Touba Bakhdaté Transport Logistique" width="56" height="56">
       <div>
-        <h1>Touba Bakhdad Transport Bagage</h1>
-        <p>Caisse — reçus de paiement · <span class="mode" id="mode"></span></p>
+        <h1>Touba Bakhdaté Transport Logistique</h1>
+        <p>Caisse — reçus de transport · <span class="mode" id="mode"></span></p>
       </div>
     </div>
     <div class="tabs" role="tablist">
@@ -29,7 +29,7 @@
 
   <section id="view-new" class="grid">
     <form class="panel" id="form" novalidate>
-      <h2>Reçu de paiement</h2>
+      <h2>Reçu de transport</h2>
       <div class="row">
         <label>Date<input id="f-date" type="datetime-local"></label>
         <label>N° de reçu<input id="f-num" type="text" readonly></label>
@@ -39,7 +39,7 @@
         <label>Destination<input id="f-dest" type="text" list="destinations" autocomplete="off" placeholder="Ex. Touba"></label>
         <label>Tél. du destinataire<input id="f-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="77 123 45 67"></label>
       </div>
-      <datalist id="destinations"><option value="Dakar"><option value="Touba"><option value="Ourossogui"><option value="Bakel"><option value="Kidira"></datalist>
+      <datalist id="destinations"><option value="Dakar"><option value="Touba"><option value="Ourossogui"><option value="Bakel"></datalist>
       <div class="row">
         <label>Colis<input id="f-colis" type="text" autocomplete="off" placeholder="Ex. 3 cartons"></label>
         <label class="amount">Somme<input id="f-somme" type="text" inputmode="numeric" placeholder="0"><span>F CFA</span></label>

@@ -1,6 +1,6 @@
-# Caisse T.B.T.B — Touba Bakhdad Transport Bagage
+# Caisse T.B.T.B — Touba Bakhdaté Transport Logistique
 
-Application de reçus de paiement (Date, Nom, Colis, Somme, Signature).
+Application de reçus de transport (Date, Nom, Colis, Somme, Signature).
 Le même code sert pour deux usages :
 
 | Étape | Appareil | Sortie du reçu |

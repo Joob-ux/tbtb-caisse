@@ -73,7 +73,7 @@ public class PrinterBridge {
             sep(p);
 
             p.sendRAWData(BOLD_ON, null);
-            p.setFontSize(30, null); p.printText("REÇU DE PAIEMENT\n", null);
+            p.setFontSize(30, null); p.printText("REÇU DE TRANSPORT\n", null);
             p.sendRAWData(BOLD_OFF, null);
 
             // Détails
@@ -106,7 +106,7 @@ public class PrinterBridge {
 
             p.setAlignment(1, null);
             p.setFontSize(18, null);
-            p.printText("Merci de votre confiance.\nConservez ce reçu pour retirer vos colis.\n", null);
+            p.printText(e.optString("slogan", "") + "\nMerci de votre confiance.\nConservez ce reçu pour retirer vos colis.\n", null);
             p.lineWrap(4, null);
             return "ok";
         } catch (Exception ex) {

@@ -50,10 +50,10 @@ function sigImage() {
 const truck = `<svg viewBox="0 0 64 36" aria-hidden="true"><rect x="1" y="4" width="38" height="22" fill="#111"/><path d="M41 10h12l9 9v7H41z" fill="#111"/><rect x="45" y="13" width="7" height="6" fill="#fff"/><circle cx="12" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/><circle cx="51" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/></svg>`;
 function ticketHTML(r) {
   const E = window.TBTB.ENTREPRISE, s = Number(r.somme) || 0;
-  return `<div class="t-c"><div class="t-logo">${truck}<span class="t-name">${E.sigle}</span></div>
+  return `<div class="t-c"><div class="t-logo">${window.TBTB_LOGO ? `<img class="t-img" src="${window.TBTB_LOGO}" alt="">` : truck}</div><div class="t-name">${E.sigle}</div>
     <div class="t-sub">${E.nom}</div><div class="t-djily">${E.gerant}</div>
     <div class="t-sub">${E.tel}</div><div class="t-sub">${E.lignes}</div><div class="t-sub">${E.info}</div><div class="t-sub">${E.adresse}</div></div>
-  <hr class="t-hr"><div class="t-c t-title">Reçu de paiement</div>
+  <hr class="t-hr"><div class="t-c t-title">Reçu de transport</div>
   <div class="t-line"><span>N°</span><b>${esc(r.num)}</b></div>
   <div class="t-line"><span>Date</span><b>${esc(showDate(r.date))}</b></div><hr class="t-hr">
   <div class="t-line"><span>Nom</span><b>${esc(r.nom || '—')}</b></div>
@@ -63,7 +63,7 @@ function ticketHTML(r) {
   <div class="t-line t-total"><span>Somme</span><b>${fmt(s)} F CFA</b></div>
   ${s ? `<div class="t-words">Arrêté à la somme de ${lettres(s)} francs CFA.</div>` : ''}
   <div class="t-sig"><div>Signature :</div>${r.sig ? `<img alt="Signature" src="${r.sig}">` : '<div class="empty"></div>'}</div>
-  <div class="t-c t-foot">Merci de votre confiance.<br>Conservez ce reçu pour retirer vos colis.</div>`;
+  <div class="t-c t-foot"><b>${E.slogan}</b><br>Merci de votre confiance.<br>Conservez ce reçu pour retirer vos colis.</div>`;
 }
 function current() {
   return { num: $('f-num').value, date: $('f-date').value, nom: $('f-nom').value.trim(), dest: $('f-dest').value.trim(), tel: telFmt($('f-tel').value), colis: $('f-colis').value.trim(),
@@ -161,5 +161,11 @@ window.addEventListener('resize', sizeCanvas);
 
 /* Installation hors ligne (téléphone) */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* Logo en mémoire (data URL) pour l'aperçu, le PDF et l'impression */
+fetch('assets/logo-ticket.jpg').then(r => r.ok ? r.blob() : null).then(b => {
+  if (!b) return; const fr = new FileReader();
+  fr.onload = () => { window.TBTB_LOGO = fr.result; render(); }; fr.readAsDataURL(b);
+}).catch(() => {});
 
 sizeCanvas(); resetForm(); renderHist();

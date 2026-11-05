@@ -2,12 +2,13 @@
 (function (root) {
   const ENTREPRISE = {
     sigle: 'T.B.T.B',
-    nom: 'Touba Bakhdad Transport Bagage',
+    nom: 'Touba Bakhdaté Transport Logistique',
     gerant: 'DJILY THIANE',
     tel: 'Tel. 78 161 18 18 - 78 161 17 17',
-    lignes: 'Dakar - Touba - Ourossogui - Bakel - Kidira',
+    lignes: 'Dakar - Touba - Ourossogui - Bakel',
     info: 'Chargement tous les jours',
-    adresse: 'Rond-Point Pompier, Immeuble 4G'
+    adresse: 'Rond-point Pompier, immeuble 4C',
+    slogan: 'Votre partenaire de confiance !'
   };
 
   const pad = n => String(n).padStart(2, '0');
@@ -63,8 +64,12 @@
       });
     };
 
-    // Logo camion
-    if (draw) {
+    // Logo de l'entreprise (image ronde), sinon camion dessiné
+    const logo = root.TBTB_LOGO;
+    if (logo) {
+      if (draw) { try { doc.addImage(logo, 'JPEG', W / 2 - 10, y, 20, 20, undefined, 'FAST'); } catch (e) {} }
+      y += 22;
+    } else if (draw) {
       doc.setFillColor(0, 0, 0);
       const x = W / 2 - 9, t = y;
       doc.rect(x, t, 11, 6.5, 'F');
@@ -73,7 +78,7 @@
       doc.circle(x + 3, t + 7, 1.6, 'FD'); doc.circle(x + 14.5, t + 7, 1.6, 'FD');
       doc.setDrawColor(0, 0, 0);
     }
-    y += 10;
+    if (!logo) y += 10;
     center(ENTREPRISE.sigle, 18, 'bold');
     center(ENTREPRISE.nom, 7.5);
     center(ENTREPRISE.gerant, 10, 'bold');
@@ -82,7 +87,7 @@
     center(ENTREPRISE.info, 7);
     center(ENTREPRISE.adresse, 7);
     dash();
-    center('REÇU DE PAIEMENT', 11, 'bold');
+    center('REÇU DE TRANSPORT', 11, 'bold');
     y += 1;
     pair('N°', r.num, 8);
     pair('Date', showDate(r.date), 8);
@@ -100,6 +105,7 @@
     y += 14;
     if (draw) { doc.setLineWidth(0.2); doc.line(M, y, W - M, y); }
     y += 3;
+    center(ENTREPRISE.slogan, 7, 'bold');
     center('Merci de votre confiance.', 7);
     center('Conservez ce reçu pour retirer vos colis.', 7);
     return y + 4;
