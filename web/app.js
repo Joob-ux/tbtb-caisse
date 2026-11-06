@@ -104,20 +104,19 @@ function makePDF(r) {
   $('btn-share').hidden = !canShare;
 }
 
-/* Impression via RawBT (pont Android) */
-function printViaRawBT(r) {
-  const texte = ticketText(r);
-  window.Android.printReceipt(texte);
+/* Impression via RawBT (pont Android) : ticket en image (comme l'aperçu, avec logo),
+   texte brut en secours si l'image ne peut pas être générée. */
+async function printViaRawBT(r) {
+  let data;
+  try { data = 'base64,' + await window.TBTB.ticketEscPos(r); }
+  catch (e) { data = ticketText(r); }
+  window.Android.printReceipt(data);
 }
 
 function output(r) {
   if (ANDROID_PRINT) {
-    try {
-      printViaRawBT(r);
-      return `Reçu ${r.num} envoyé à l'imprimante.`;
-    } catch (e) {
-      return `Reçu ${r.num} enregistré, mais l'impression a échoué : ${e}`;
-    }
+    printViaRawBT(r).catch(e => { const m = $('msg'); m.className = 'msg err'; m.textContent = `Reçu ${r.num} enregistré, mais l'impression a échoué : ${e}`; m.hidden = false; });
+    return `Reçu ${r.num} envoyé à l'imprimante.`;
   }
   lastRecu = r; makePDF(r); return `Reçu ${r.num} prêt : imprimez-le ou partagez le PDF.`;
 }
