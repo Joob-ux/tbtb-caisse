@@ -104,13 +104,17 @@ function makePDF(r) {
   $('btn-share').hidden = !canShare;
 }
 
-/* Impression via RawBT (pont Android) : ticket en image (comme l'aperçu, avec logo),
-   texte brut en secours si l'image ne peut pas être générée. */
+/* Impression via RawBT (pont Android).
+   - Android.printRaw (appli récente) : ticket en image ESC/POS, comme l'aperçu, avec logo.
+   - Android.printReceipt seul (ancienne appli) : TEXTE uniquement. Ce pont encode l'URL et RawBT
+     imprimerait alors le base64 comme du texte (ticket sans fin) : ne jamais lui passer d'image. */
 async function printViaRawBT(r) {
-  let data;
-  try { data = 'base64,' + await window.TBTB.ticketEscPos(r); }
-  catch (e) { data = ticketText(r); }
-  window.Android.printReceipt(data);
+  if (typeof window.Android.printRaw === 'function') {
+    let img = null;
+    try { img = await window.TBTB.ticketEscPos(r); } catch (e) {}
+    if (img) { window.Android.printRaw('base64,' + img); return; }
+  }
+  window.Android.printReceipt(ticketText(r));
 }
 
 function output(r) {
