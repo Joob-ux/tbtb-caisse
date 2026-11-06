@@ -1,19 +1,22 @@
 /* Caisse T.B.T.B — logique de l'application
    Mode téléphone : le reçu est généré en PDF (partage / téléchargement).
-   Mode TPE Sunmi : l'appli Android expose window.SunmiPrinter et le ticket s'imprime directement. */
+   Mode TPE : l'appli Android expose window.Android.printReceipt → RawBT imprime le ticket. */
 const $ = id => document.getElementById(id);
 const { fmt, showDate, lettres, ticketPDF } = window.TBTB;
 const KEY = 'tbtb_recus_v1';
 const pad = n => String(n).padStart(2, '0');
 const toLocalInput = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
 /* Téléphone sénégalais : 9 chiffres, +221 facultatif → « 77 123 45 67 » */
 const telDigits = s => { let d = String(s).replace(/\D/g, ''); if (d.startsWith('221') && d.length > 9) d = d.slice(3); return d.slice(0, 9); };
 const telFmt = s => { const d = telDigits(s); return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' '); };
-const SUNMI = !!(window.SunmiPrinter && window.SunmiPrinter.print);
 
-$('mode').textContent = SUNMI ? 'Impression TPE' : 'Reçus en PDF';
-$('btn-submit').textContent = SUNMI ? 'Valider et imprimer' : 'Valider et créer le PDF';
+/* Détection du pont Android (RawBT via WebView) */
+const ANDROID_PRINT = !!(window.Android && typeof window.Android.printReceipt === 'function');
+
+$('mode').textContent = ANDROID_PRINT ? 'Impression TPE (RawBT)' : 'Reçus en PDF';
+$('btn-submit').textContent = ANDROID_PRINT ? 'Valider et imprimer' : 'Valider et créer le PDF';
 
 /* Stockage local (sur l'appareil) */
 function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(v)) return v; } catch (e) {} return []; }
@@ -48,7 +51,45 @@ function render() {
   $('f-words').textContent = r.somme ? lettres(r.somme) + ' francs CFA' : '';
 }
 
-/* Sortie : imprimante Sunmi ou PDF */
+/* === TEXTE BRUT POUR L'IMPRIMANTE THERMIQUE (32 colonnes) === */
+function ticketText(r) {
+  const E = window.TBTB.ENTREPRISE, s = Number(r.somme) || 0;
+  const L = '--------------------------------';
+  const line = (label, value) => {
+    const left = String(label);
+    const right = String(value || '—');
+    const spaces = Math.max(1, 32 - left.length - right.length);
+    return left + ' '.repeat(spaces) + right + '\n';
+  };
+  let t = '';
+  t += '        ' + E.sigle + '\n';
+  t += E.nom + '\n';
+  t += E.gerant + '\n';
+  t += E.tel + '\n';
+  t += E.lignes + '\n';
+  t += E.info + '\n';
+  t += E.adresse + '\n';
+  t += L + '\n';
+  t += '     Reçu de transport\n';
+  t += L + '\n';
+  t += line('N°', r.num);
+  t += line('Date', showDate(r.date));
+  t += L + '\n';
+  t += line('Nom', r.nom);
+  t += line('Destination', r.dest);
+  t += line('Tél. dest.', r.tel);
+  t += line('Colis', r.colis);
+  t += L + '\n';
+  t += line('Somme', fmt(s) + ' F CFA');
+  if (s) t += '\nArrêté à la somme de ' + lettres(s) + ' francs CFA.\n';
+  t += L + '\n';
+  t += '   ' + E.slogan + '\n';
+  t += 'Merci de votre confiance.\n';
+  t += 'Conservez ce reçu pour retirer vos colis.\n\n\n';
+  return t;
+}
+
+/* Sortie : RawBT (TPE) ou PDF (téléphone) */
 const payload = r => JSON.stringify(Object.assign({}, r, { entreprise: window.TBTB.ENTREPRISE, dateTxt: showDate(r.date), sommeTxt: fmt(r.somme), lettres: lettres(r.somme) }));
 let lastUrl = null, lastFile = null;
 function makePDF(r) {
@@ -62,18 +103,34 @@ function makePDF(r) {
   const canShare = navigator.canShare && navigator.canShare({ files: [lastFile] });
   $('btn-share').hidden = !canShare;
 }
+
+/* Impression via RawBT (pont Android) */
+function printViaRawBT(r) {
+  const texte = ticketText(r);
+  window.Android.printReceipt(texte);
+}
+
 function output(r) {
-  if (SUNMI) {
-    let res = 'ok';
-    try { res = window.SunmiPrinter.print(payload(r)); } catch (e) { res = String(e); }
-    return res === 'ok' ? `Reçu ${r.num} imprimé.` : `Reçu ${r.num} enregistré, mais l'impression a échoué : ${res}`;
+  if (ANDROID_PRINT) {
+    try {
+      printViaRawBT(r);
+      return `Reçu ${r.num} envoyé à l'imprimante.`;
+    } catch (e) {
+      return `Reçu ${r.num} enregistré, mais l'impression a échoué : ${e}`;
+    }
   }
   lastRecu = r; makePDF(r); return `Reçu ${r.num} prêt : imprimez-le ou partagez le PDF.`;
 }
+
 function printTicket(r) {
+  if (ANDROID_PRINT) {
+    printViaRawBT(r);
+    return;
+  }
   $('print-area').innerHTML = '<div class="ticket">' + ticketHTML(r) + '</div>';
   setTimeout(() => window.print(), 50);
 }
+
 let lastRecu = null;
 $('btn-print').onclick = () => { if (lastRecu) printTicket(lastRecu); };
 $('btn-share').onclick = async () => {
@@ -99,8 +156,8 @@ $('form').addEventListener('submit', e => {
   m.hidden = true;
   recus.unshift(r); save(); renderHist();
   $('done-text').textContent = output(r);
-  $('done').hidden = SUNMI;
-  if (SUNMI) { m.className = 'msg ok'; m.textContent = $('done-text').textContent; m.hidden = false; }
+  $('done').hidden = ANDROID_PRINT;
+  if (ANDROID_PRINT) { m.className = 'msg ok'; m.textContent = $('done-text').textContent; m.hidden = false; }
 });
 
 /* Historique */
@@ -110,13 +167,13 @@ function renderHist() {
   $('s-count').textContent = t.length;
   $('s-total').textContent = fmt(t.reduce((s, r) => s + r.somme, 0)) + ' F';
   $('s-colis').textContent = t.reduce((s, r) => s + (parseInt(r.colis) || 0), 0);
-  $('h-body').innerHTML = recus.length ? recus.map((r, i) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${SUNMI ? `<button class="mini" data-i="${i}" data-a="pdf">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`}</td></tr>`).join('')
+  $('h-body').innerHTML = recus.length ? recus.map((r, i) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${ANDROID_PRINT ? `<button class="mini" data-i="${i}" data-a="print">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`}</td></tr>`).join('')
     : '<tr><td colspan="8" style="color:var(--muted)">Aucun reçu pour l\'instant. Les reçus validés apparaîtront ici.</td></tr>';
 }
 $('h-body').addEventListener('click', async e => {
   const b = e.target.closest('button[data-i]'); if (!b) return;
   const r = recus[+b.dataset.i];
-  if (SUNMI) { window.SunmiPrinter.print(payload(r)); return; }
+  if (ANDROID_PRINT) { printViaRawBT(r); return; }
   if (b.dataset.a === 'print') { printTicket(r); return; }
   makePDF(r);
   if (navigator.canShare && navigator.canShare({ files: [lastFile] })) { try { await navigator.share({ files: [lastFile], title: lastFile.name }); return; } catch (err) { return; } }
