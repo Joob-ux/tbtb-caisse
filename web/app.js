@@ -26,6 +26,8 @@ function nextNum() { const max = recus.reduce((m, r) => Math.max(m, parseInt(r.n
 
 /* Aperçu écran */
 const truck = `<svg viewBox="0 0 64 36" aria-hidden="true"><rect x="1" y="4" width="38" height="22" fill="#111"/><path d="M41 10h12l9 9v7H41z" fill="#111"/><rect x="45" y="13" width="7" height="6" fill="#fff"/><circle cx="12" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/><circle cx="51" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/></svg>`;
+/* Ligne facultative : rien n'est affiché quand la valeur est vide */
+const opt = (label, v) => v ? `<div class="t-line"><span>${label}</span><b>${esc(v)}</b></div>` : '';
 function ticketHTML(r) {
   const E = window.TBTB.ENTREPRISE, s = Number(r.somme) || 0;
   return `<div class="t-c"><div class="t-logo">${window.TBTB_LOGO ? `<img class="t-img" src="${window.TBTB_LOGO}" alt="">` : truck}</div><div class="t-name">${E.sigle}</div>
@@ -33,13 +35,12 @@ function ticketHTML(r) {
     <div class="t-sub">${E.tel}</div><div class="t-sub">${E.lignes}</div><div class="t-sub">${E.info}</div><div class="t-sub">${E.adresse}</div></div>
   <hr class="t-hr"><div class="t-c t-title">Reçu de transport</div>
   <div class="t-line"><span>N°</span><b>${esc(r.num)}</b></div>
-  <div class="t-line"><span>Date</span><b>${esc(showDate(r.date))}</b></div><hr class="t-hr">
+  ${opt('Date', showDate(r.date))}<hr class="t-hr">
   <div class="t-line"><span>Nom</span><b>${esc(r.nom || '—')}</b></div>
-  <div class="t-line"><span>Destination</span><b>${esc(r.dest || '—')}</b></div>
-  <div class="t-line"><span>Tél. dest.</span><b>${esc(r.tel || '—')}</b></div>
-  <div class="t-line"><span>Colis</span><b>${esc(r.colis || '—')}</b></div><hr class="t-hr">
-  <div class="t-line t-total"><span>Somme</span><b>${fmt(s)} F CFA</b></div>
-  ${s ? `<div class="t-words">Arrêté à la somme de ${lettres(s)} francs CFA.</div>` : ''}
+  ${opt('Destination', r.dest)}${opt('Tél. dest.', r.tel)}
+  <div class="t-line t-colis"><span>Colis</span><b>${esc(r.colis || '—')}</b></div>
+  ${s ? `<hr class="t-hr"><div class="t-line t-total"><span>Somme</span><b>${fmt(s)} F CFA</b></div>
+  <div class="t-words">Arrêté à la somme de ${lettres(s)} francs CFA.</div>` : ''}
   <div class="t-c t-foot"><b>${E.slogan}</b><br>Merci de votre confiance.<br>Conservez ce reçu pour retirer vos colis.</div>`;
 }
 function current() {
@@ -73,15 +74,14 @@ function ticketText(r) {
   t += '     Reçu de transport\n';
   t += L + '\n';
   t += line('N°', r.num);
-  t += line('Date', showDate(r.date));
+  const optLine = (label, v) => v ? line(label, v) : '';
+  t += optLine('Date', showDate(r.date));
   t += L + '\n';
   t += line('Nom', r.nom);
-  t += line('Destination', r.dest);
-  t += line('Tél. dest.', r.tel);
-  t += line('Colis', r.colis);
-  t += L + '\n';
-  t += line('Somme', fmt(s) + ' F CFA');
-  if (s) t += '\nArrêté à la somme de ' + lettres(s) + ' francs CFA.\n';
+  t += optLine('Destination', r.dest);
+  t += optLine('Tél. dest.', r.tel);
+  t += 'COLIS : ' + String(r.colis || '—').toUpperCase() + '\n';
+  if (s) { t += L + '\n' + line('Somme', fmt(s) + ' F CFA') + '\nArrêté à la somme de ' + lettres(s) + ' francs CFA.\n'; }
   t += L + '\n';
   t += '   ' + E.slogan + '\n';
   t += 'Merci de votre confiance.\n';
@@ -153,8 +153,10 @@ $('f-somme').addEventListener('input', e => { const n = e.target.value.replace(/
 $('reset').onclick = resetForm;
 $('form').addEventListener('submit', e => {
   e.preventDefault(); const r = current(), m = $('msg');
-  const missing = []; if (!r.nom) missing.push('le nom'); if (!r.dest) missing.push('la destination'); if (telDigits(r.tel).length !== 9) missing.push('le téléphone du destinataire (9 chiffres)'); if (!r.colis) missing.push('les colis'); if (!r.somme) missing.push('la somme');
-  if (missing.length) { m.className = 'msg err'; m.textContent = 'Renseignez ' + missing.join(', ') + ' avant de valider.'; m.hidden = false; return; }
+  /* Obligatoires : nom, colis et somme ; le reste est facultatif. Une date vide prend l'heure actuelle */
+  const missing = []; if (!r.nom) missing.push('le nom'); if (!r.colis) missing.push('le colis'); if (!r.somme) missing.push('la somme');
+  if (missing.length) { m.className = 'msg err'; m.textContent = 'Renseignez ' + missing.join(', ').replace(/, ([^,]*)$/, ' et $1') + ' avant de valider.'; m.hidden = false; return; }
+  if (!r.date) { r.date = toLocalInput(new Date()); $('f-date').value = r.date; }
   if (recus.some(x => x.num === r.num)) { m.className = 'msg err'; m.textContent = 'Ce reçu est déjà enregistré. Appuyez sur « Nouveau ».'; m.hidden = false; return; }
   m.hidden = true;
   recus.unshift(r); save(); renderHist();
@@ -201,7 +203,7 @@ function releveText(g) {
   const line = (a, b) => { a = String(a); b = String(b || '—'); return a + ' '.repeat(Math.max(1, 32 - a.length - b.length)) + b + '\n'; };
   let t = `        ${E.sigle}\n${E.nom}\n${E.gerant}\n${E.tel}\n${L}\n      RELEVE CLIENT\n${L}\n`;
   t += line('Nom', g.nom) + line('Période', g.periode) + line('Reçus', g.items.length) + L + '\n';
-  g.items.forEach(r => { t += line(r.num, fmt(r.somme) + ' F') + `${showDate(r.date)} ${r.dest || ''} ${r.colis || ''}\n`; });
+  g.items.forEach(r => { t += line(r.num, fmt(r.somme) + ' F') + `${[showDate(r.date), r.dest, r.colis].filter(Boolean).join(' ')}\n`; });
   t += L + '\n' + line('Total colis', g.colis) + line('Total', fmt(g.somme) + ' F CFA');
   t += `\nArrêté à la somme de ${lettres(g.somme)} francs CFA.\n${L}\n   ${E.slogan}\nMerci de votre confiance.\n\n\n`;
   return t;
@@ -213,7 +215,7 @@ function releveHTML(g) {
   <hr class="t-hr"><div class="t-c t-title">Relevé client</div>
   <div class="t-line"><span>Nom</span><b>${esc(g.nom)}</b></div><div class="t-line"><span>Période</span><b>${esc(g.periode)}</b></div>
   <div class="t-line"><span>Reçus</span><b>${g.items.length}</b></div><hr class="t-hr">
-  ${g.items.map(r => `<div class="t-line"><b>${esc(r.num)}</b><b>${fmt(r.somme)} F</b></div><div class="t-sub">${esc(showDate(r.date))} · ${esc(r.dest || '—')} · ${esc(r.colis || '—')}</div>`).join('<div style="height:4px"></div>')}
+  ${g.items.map(r => `<div class="t-line"><b>${esc(r.num)}</b><b>${fmt(r.somme)} F</b></div><div class="t-sub">${esc([showDate(r.date), r.dest, r.colis].filter(Boolean).join(' · '))}</div>`).join('<div style="height:4px"></div>')}
   <hr class="t-hr"><div class="t-line"><span>Total colis</span><b>${g.colis}</b></div>
   <div class="t-line t-total"><span>Total</span><b>${fmt(g.somme)} F CFA</b></div>
   <div class="t-words">Arrêté à la somme de ${lettres(g.somme)} francs CFA.</div>

@@ -90,14 +90,13 @@
     center('REÇU DE TRANSPORT', 11, 'bold');
     y += 1;
     pair('N°', r.num, 8);
-    pair('Date', showDate(r.date), 8);
+    if (showDate(r.date)) pair('Date', showDate(r.date), 8);
     dash();
     pair('Nom', r.nom, 9);
-    pair('Destination', r.dest, 9);
-    pair('Tél. dest.', r.tel, 9);
-    pair('Colis', r.colis, 9);
-    dash();
-    pair('Somme', fmt(r.somme) + ' F CFA', 11, 'bold');
+    if (r.dest) pair('Destination', r.dest, 9);
+    if (r.tel) pair('Tél. dest.', r.tel, 9);
+    y += 0.8; pair('Colis', r.colis, 11, 'bold');   // colis plus gros, comme la somme
+    if (r.somme) { dash(); pair('Somme', fmt(r.somme) + ' F CFA', 11, 'bold'); }
     if (r.somme) { y += 0.8; font(7, 'italic'); doc.splitTextToSize('Arrêté à la somme de ' + lettres(r.somme) + ' francs CFA.', CW).forEach(l => { if (draw) doc.text(l, M, y + lh(7) * 0.75); y += lh(7); }); }
     dash();
     y += 1;

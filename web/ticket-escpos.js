@@ -122,16 +122,19 @@
   function ticketCanvas(r) {
     const { fmt, showDate, lettres } = window.TBTB, s = Number(r.somme) || 0;
     return draw('REÇU DE TRANSPORT', t => {
+      const d = showDate(r.date);
       t.pair('N°', r.num);
-      t.pair('Date', showDate(r.date));
+      if (d) t.pair('Date', d);
       t.hr();
       t.pair('Nom', r.nom);
-      t.pair('Destination', r.dest);
-      t.pair('Tél. dest.', r.tel);
-      t.pair('Colis', r.colis);
-      t.hr();
-      t.gap(4); t.pair('Somme', fmt(s) + ' F CFA', 15, 600);
-      if (s) { t.gap(4); t.para(`Arrêté à la somme de ${lettres(s)} francs CFA.`, 10, 400, 'italic'); }
+      if (r.dest) t.pair('Destination', r.dest);
+      if (r.tel) t.pair('Tél. dest.', r.tel);
+      t.gap(4); t.pair('Colis', r.colis, 15, 600, 700);   // colis plus gros, comme la somme
+      if (s) {
+        t.hr();
+        t.gap(4); t.pair('Somme', fmt(s) + ' F CFA', 15, 600);
+        t.gap(4); t.para(`Arrêté à la somme de ${lettres(s)} francs CFA.`, 10, 400, 'italic');
+      }
     });
   }
 
@@ -146,7 +149,7 @@
       g.items.forEach((r, i) => {
         if (i) t.gap(5);
         t.pair(r.num, fmt(r.somme) + ' F', 11.5, 600, 600);
-        t.para(`${showDate(r.date)} · ${r.dest || '—'} · ${r.colis || '—'}`, 10);
+        t.para([showDate(r.date), r.dest, r.colis].filter(Boolean).join(' · '), 10);
       });
       t.hr();
       t.pair('Total colis', String(g.colis));

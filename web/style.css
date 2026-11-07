@@ -67,6 +67,10 @@ input:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid 
 .t-line{display:flex;justify-content:space-between;gap:8px}
 .t-line b{font-weight:600;text-align:right;overflow-wrap:anywhere}
 .t-total{font-size:15px;font-weight:600;margin-top:4px}
+.t-colis{font-size:15px;font-weight:600;margin-top:4px}
+.t-colis b{font-weight:700}
+#f-colis{font-size:18px;font-weight:600}
+.req{color:var(--err);font-style:normal}
 .t-words{font-size:10px;font-style:italic;margin-top:4px}
 .t-foot{font-size:9.5px;margin-top:10px}
 /* Historique */

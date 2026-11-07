@@ -34,15 +34,15 @@
         <label>Date<input id="f-date" type="datetime-local"></label>
         <label>N° de reçu<input id="f-num" type="text" readonly></label>
       </div>
-      <label>Nom du client<input id="f-nom" type="text" autocomplete="off" placeholder="Ex. Moussa Ndiaye"></label>
+      <label>Nom du client <i class="req">*</i><input id="f-nom" type="text" autocomplete="off" placeholder="Ex. Moussa Ndiaye"></label>
       <div class="row">
         <label>Destination<input id="f-dest" type="text" list="destinations" autocomplete="off" placeholder="Ex. Touba"></label>
         <label>Tél. du destinataire<input id="f-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="77 123 45 67"></label>
       </div>
       <datalist id="destinations"><option value="Dakar"><option value="Touba"><option value="Ourossogui"><option value="Bakel"></datalist>
       <div class="row">
-        <label>Colis<input id="f-colis" type="text" autocomplete="off" placeholder="Ex. 3 cartons"></label>
-        <label class="amount">Somme<input id="f-somme" type="text" inputmode="numeric" placeholder="0"><span>F CFA</span></label>
+        <label>Colis <i class="req">*</i><input id="f-colis" type="text" autocomplete="off" placeholder="Ex. 3 cartons"></label>
+        <label class="amount">Somme <i class="req">*</i><input id="f-somme" type="text" inputmode="numeric" placeholder="0"><span>F CFA</span></label>
       </div>
       <div class="words" id="f-words"></div>
       <div id="msg" class="msg" hidden></div>
