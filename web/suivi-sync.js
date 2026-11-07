@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const set = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
-  const SUIVI_URL = get('tbtb_suivi_url') || 'https://tbtb-suivi.onrender.com';   // tbtb_suivi_url : seulement pour les essais
+  const SUIVI_URL = get('tbtb_suivi_url') || 'https://tbtb-suivi-g2vd.onrender.com';   // tbtb_suivi_url : seulement pour les essais
 
   /* Identifiant de cet appareil (chaque caisse a sa propre numérotation) */
   let appareil = get(K_APP);

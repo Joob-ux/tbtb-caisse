@@ -22,7 +22,7 @@ $('btn-submit').textContent = ANDROID_PRINT ? 'Valider et imprimer' : 'Valider e
 function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(v)) return v; } catch (e) {} return []; }
 let recus = load();
 function save() { try { localStorage.setItem(KEY, JSON.stringify(recus)); } catch (e) {} }
-function nextNum() { const max = recus.reduce((m, r) => Math.max(m, parseInt(r.num.split('-')[1]) || 0), 0); return 'TBTB-' + String(max + 1).padStart(6, '0'); }
+function nextNum() { const max = recus.reduce((m, r) => Math.max(m, parseInt(r.num.split('-')[1]) || 0), 0); return 'TBTL-' + String(max + 1).padStart(6, '0'); }
 
 /* Aperçu écran */
 const truck = `<svg viewBox="0 0 64 36" aria-hidden="true"><rect x="1" y="4" width="38" height="22" fill="#111"/><path d="M41 10h12l9 9v7H41z" fill="#111"/><rect x="45" y="13" width="7" height="6" fill="#fff"/><circle cx="12" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/><circle cx="51" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/></svg>`;
