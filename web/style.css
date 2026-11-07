@@ -33,7 +33,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:460px){.row{grid-template-columns:1fr}}
 label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-input{font:500 16px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+input,select{font:500 16px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
 input:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .amount{position:relative}
 .amount input{padding-right:52px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
@@ -46,6 +46,8 @@ input:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid 
 .btn.ghost{background:var(--brand-soft);color:var(--fg)}
 .msg{font-size:14px;padding:10px 12px;border-radius:8px;background:var(--brand-soft)}
 .msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
+.btn:disabled{opacity:.5;cursor:default}
+#grp .msg{margin:0}
 .preview{display:flex;flex-direction:column;gap:8px;align-items:center;position:sticky;top:env(safe-area-inset-top,0px)}
 .preview .cap{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 /* Ticket thermique : noir sur blanc, comme le papier réel */

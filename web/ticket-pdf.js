@@ -1,7 +1,7 @@
-/* T.B.T.B — génération du ticket 58 mm en PDF (navigateur et Node) */
+/* T.B.T.L — génération du ticket 58 mm en PDF (navigateur et Node) */
 (function (root) {
   const ENTREPRISE = {
-    sigle: 'T.B.T.B',
+    sigle: 'T.B.T.L',
     nom: 'Touba Bakhdaté Transport Logistique',
     gerant: 'DJILY THIANE',
     tel: 'Tel. 78 161 18 18 - 78 161 17 17',

@@ -1,4 +1,4 @@
-/* Caisse T.B.T.B — logique de l'application
+/* Caisse T.B.T.L — logique de l'application
    Mode téléphone : le reçu est généré en PDF (partage / téléchargement).
    Mode TPE : l'appli Android expose window.Android.printReceipt → RawBT imprime le ticket. */
 const $ = id => document.getElementById(id);
@@ -172,7 +172,68 @@ function renderHist() {
   $('s-colis').textContent = t.reduce((s, r) => s + (parseInt(r.colis) || 0), 0);
   $('h-body').innerHTML = recus.length ? recus.map((r, i) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${ANDROID_PRINT ? `<button class="mini" data-i="${i}" data-a="print">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`}</td></tr>`).join('')
     : '<tr><td colspan="8" style="color:var(--muted)">Aucun reçu pour l\'instant. Les reçus validés apparaîtront ici.</td></tr>';
+  renderGroupe();
 }
+/* Regroupement par client : tous les reçus d'un même nom, imprimés sur un seul relevé.
+   Les noms sont comparés sans majuscules, accents ni espaces en trop (« Diop » = « diop »). */
+const normNom = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+function groupe() {
+  const key = normNom($('g-nom').value); if (!key) return null;
+  const today = new Date().toDateString();
+  const items = recus.filter(r => normNom(r.nom) === key && ($('g-per').value === 'all' || new Date(r.date).toDateString() === today))
+    .slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (!items.length) return { items };
+  const d = r => showDate(r.date).slice(0, 10), from = d(items[0]), to = d(items[items.length - 1]);
+  return { nom: items[items.length - 1].nom, items, periode: from === to ? from : `${from} au ${to}`,
+    colis: items.reduce((s, r) => s + (parseInt(r.colis) || 0), 0), somme: items.reduce((s, r) => s + (Number(r.somme) || 0), 0) };
+}
+function renderGroupe() {
+  const names = new Map(); recus.forEach(r => { const k = normNom(r.nom); if (k && !names.has(k)) names.set(k, r.nom); });
+  $('clients').innerHTML = [...names.values()].map(n => `<option value="${esc(n)}">`).join('');
+  const g = groupe(), s = $('g-sum');
+  if (!g) { s.className = 'msg'; s.textContent = 'Choisissez un client pour voir ses reçus.'; }
+  else if (!g.items.length) { s.className = 'msg err'; s.textContent = $('g-per').value === 'day' ? 'Aucun reçu à ce nom aujourd\'hui. Essayez « Tout l\'historique ».' : 'Aucun reçu à ce nom.'; }
+  else { s.className = 'msg ok'; s.textContent = `${g.items.length} reçu${g.items.length > 1 ? 's' : ''} · ${g.colis} colis · ${fmt(g.somme)} F CFA (${g.items.map(r => r.num).join(', ')})`; }
+  $('g-print').disabled = !(g && g.items.length);
+}
+function releveText(g) {
+  const E = window.TBTB.ENTREPRISE, L = '--------------------------------';
+  const line = (a, b) => { a = String(a); b = String(b || '—'); return a + ' '.repeat(Math.max(1, 32 - a.length - b.length)) + b + '\n'; };
+  let t = `        ${E.sigle}\n${E.nom}\n${E.gerant}\n${E.tel}\n${L}\n      RELEVE CLIENT\n${L}\n`;
+  t += line('Nom', g.nom) + line('Période', g.periode) + line('Reçus', g.items.length) + L + '\n';
+  g.items.forEach(r => { t += line(r.num, fmt(r.somme) + ' F') + `${showDate(r.date)} ${r.dest || ''} ${r.colis || ''}\n`; });
+  t += L + '\n' + line('Total colis', g.colis) + line('Total', fmt(g.somme) + ' F CFA');
+  t += `\nArrêté à la somme de ${lettres(g.somme)} francs CFA.\n${L}\n   ${E.slogan}\nMerci de votre confiance.\n\n\n`;
+  return t;
+}
+function releveHTML(g) {
+  const E = window.TBTB.ENTREPRISE;
+  return `<div class="t-c"><div class="t-logo">${window.TBTB_LOGO ? `<img class="t-img" src="${window.TBTB_LOGO}" alt="">` : truck}</div><div class="t-name">${E.sigle}</div>
+    <div class="t-sub">${E.nom}</div><div class="t-djily">${E.gerant}</div><div class="t-sub">${E.tel}</div><div class="t-sub">${E.lignes}</div><div class="t-sub">${E.adresse}</div></div>
+  <hr class="t-hr"><div class="t-c t-title">Relevé client</div>
+  <div class="t-line"><span>Nom</span><b>${esc(g.nom)}</b></div><div class="t-line"><span>Période</span><b>${esc(g.periode)}</b></div>
+  <div class="t-line"><span>Reçus</span><b>${g.items.length}</b></div><hr class="t-hr">
+  ${g.items.map(r => `<div class="t-line"><b>${esc(r.num)}</b><b>${fmt(r.somme)} F</b></div><div class="t-sub">${esc(showDate(r.date))} · ${esc(r.dest || '—')} · ${esc(r.colis || '—')}</div>`).join('<div style="height:4px"></div>')}
+  <hr class="t-hr"><div class="t-line"><span>Total colis</span><b>${g.colis}</b></div>
+  <div class="t-line t-total"><span>Total</span><b>${fmt(g.somme)} F CFA</b></div>
+  <div class="t-words">Arrêté à la somme de ${lettres(g.somme)} francs CFA.</div>
+  <div class="t-c t-foot"><b>${E.slogan}</b><br>Merci de votre confiance.</div>`;
+}
+async function printReleve(g) {
+  if (ANDROID_PRINT) {
+    if (typeof window.Android.printRaw === 'function') {
+      let img = null; try { img = await window.TBTB.releveEscPos(g); } catch (e) {}
+      if (img) { window.Android.printRaw('base64,' + img); return; }
+    }
+    window.Android.printReceipt(releveText(g)); return;
+  }
+  $('print-area').innerHTML = '<div class="ticket">' + releveHTML(g) + '</div>';
+  setTimeout(() => window.print(), 50);
+}
+$('g-nom').addEventListener('input', renderGroupe);
+$('g-per').addEventListener('change', renderGroupe);
+$('g-print').onclick = () => { const g = groupe(); if (g && g.items.length) printReleve(g); };
+
 $('h-body').addEventListener('click', async e => {
   const b = e.target.closest('button[data-i]'); if (!b) return;
   const r = recus[+b.dataset.i];

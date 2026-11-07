@@ -1,6 +1,7 @@
 /* Ticket thermique 58 mm en image (384 points) : même mise en page que l'aperçu écran,
    logo compris. Le canvas est converti en noir et blanc (logo tramé) puis en commandes
-   ESC/POS raster (GS v 0), envoyées à RawBT sous la forme « base64,… ». */
+   ESC/POS raster (GS v 0), envoyées à RawBT sous la forme « base64,… ».
+   Deux modèles : le reçu (ticketCanvas) et le relevé groupé d'un client (releveCanvas). */
 (function () {
   const W = 384;             // largeur de la tête d'impression (58 mm à 203 dpi)
   const M = 8;               // marge gauche/droite en points
@@ -33,38 +34,54 @@
     return out.length ? out : [''];
   }
 
-  async function ticketCanvas(r) {
-    const { ENTREPRISE: E, fmt, showDate, lettres } = window.TBTB;
-    const s = Number(r.somme) || 0;
+  /* Tramage Floyd–Steinberg (pour le logo) : résultat en noir/blanc pur. */
+  function dither(ctx, w, h) {
+    const img = ctx.getImageData(0, 0, w, h), d = img.data, g = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+    for (let yy = 0; yy < h; yy++) for (let x = 0; x < w; x++) {
+      const i = yy * w + x, o = g[i], n = o < 128 ? 0 : 255, e = o - n; g[i] = n;
+      if (x + 1 < w) g[i + 1] += e * 7 / 16;
+      if (yy + 1 < h) { if (x > 0) g[i + w - 1] += e * 3 / 16; g[i + w] += e * 5 / 16; if (x + 1 < w) g[i + w + 1] += e / 16; }
+    }
+    for (let i = 0; i < w * h; i++) { d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = g[i]; d[i * 4 + 3] = 255; }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  /* Dessine en-tête + corps (body) + pied, et renvoie le canvas recadré à la hauteur utile. */
+  async function draw(title, body) {
+    const { ENTREPRISE: E } = window.TBTB;
     try { if (document.fonts) { await Promise.race([document.fonts.ready, new Promise(ok => setTimeout(ok, 1500))]); } } catch (e) {}
     const logo = await loadImg(window.TBTB_LOGO);
 
-    const c = document.createElement('canvas'); c.width = W; c.height = 2400;
+    const c = document.createElement('canvas'); c.width = W; c.height = 12000;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, c.height); ctx.fillStyle = '#000'; ctx.textBaseline = 'alphabetic';
-    let y = px(4);
+    const t = { ctx, y: px(4) };
     const font = (size, weight, fam, style) => { ctx.font = `${style || ''} ${weight} ${px(size)}px ${fam}`; };
     const spacing = em => { if ('letterSpacing' in ctx) ctx.letterSpacing = em ? Math.round(em * parseFloat(ctx.font.match(/(\d+)px/)[1])) + 'px' : '0px'; };
-    const center = (text, size, weight, fam, lh, em) => {
-      font(size, weight, fam); spacing(em || 0); ctx.textAlign = 'center';
-      for (const l of wrap(ctx, text, CW)) { const h = px(size * (lh || 1.4)); y += h; ctx.fillText(l, W / 2, y - (h - px(size)) / 2 - px(size) * 0.18); }
+    t.center = (text, size, weight, fam, lh, em) => {
+      font(size, weight, fam || MONO); spacing(em || 0); ctx.textAlign = 'center';
+      for (const l of wrap(ctx, text, CW)) { const h = px(size * (lh || 1.4)); t.y += h; ctx.fillText(l, W / 2, t.y - (h - px(size)) / 2 - px(size) * 0.18); }
       spacing(0);
     };
-    const hr = () => {
-      y += px(8);
-      for (let x = M; x < W - M; x += 10) ctx.fillRect(x, y, 6, 2);
-      y += 2 + px(8);
-    };
-    const pair = (label, value, size, weight) => {
+    t.hr = () => { t.y += px(8); for (let x = M; x < W - M; x += 10) ctx.fillRect(x, t.y, 6, 2); t.y += 2 + px(8); };
+    t.gap = v => { t.y += px(v); };
+    /* Libellé à gauche, valeur à droite (en gras par défaut), valeur coupée sur plusieurs lignes si besoin. */
+    t.pair = (label, value, size, weight, vWeight) => {
       const sz = size || 11.5, h = px(sz * 1.4);
       font(sz, weight || 400, MONO); ctx.textAlign = 'left';
       const lw = ctx.measureText(label).width;
-      font(sz, 600, MONO);
+      font(sz, vWeight || 600, MONO);
       const lines = wrap(ctx, value || '—', CW - lw - px(8));
-      font(sz, weight || 400, MONO); ctx.fillText(label, M, y + h - px(sz) * 0.4);
-      font(sz, 600, MONO); ctx.textAlign = 'right';
-      lines.forEach((l, i) => ctx.fillText(l, W - M, y + h * (i + 1) - px(sz) * 0.4));
-      y += h * lines.length;
+      font(sz, weight || 400, MONO); ctx.fillText(label, M, t.y + h - px(sz) * 0.4);
+      font(sz, vWeight || 600, MONO); ctx.textAlign = 'right';
+      lines.forEach((l, i) => ctx.fillText(l, W - M, t.y + h * (i + 1) - px(sz) * 0.4));
+      t.y += h * lines.length;
+    };
+    t.para = (text, size, weight, style) => {
+      font(size, weight || 400, MONO, style); ctx.textAlign = 'left';
+      const h = px(size * 1.4);
+      for (const l of wrap(ctx, text, CW)) { t.y += h; ctx.fillText(l, M, t.y - px(size) * 0.4); }
     };
 
     // En-tête
@@ -77,52 +94,65 @@
       const sw = Math.min(logo.width, logo.height);
       l.drawImage(logo, (logo.width - sw) / 2, (logo.height - sw) / 2, sw, sw, 0, 0, d, d); l.restore();
       dither(l, d, d);
-      ctx.drawImage(lc, x0, y); y += d + px(2);
+      ctx.drawImage(lc, x0, t.y); t.y += d + px(2);
     }
-    center(E.sigle, 26, 800, DISP, 1.05, 0.12);
-    center(E.nom, 10, 400, MONO, 1.4, 0.02);
-    y += px(2); center(E.gerant, 16, 800, DISP, 1.15, 0.08);
-    center(E.tel, 10, 400, MONO, 1.4, 0.02);
-    center(E.lignes, 10, 400, MONO, 1.4, 0.02);
-    center(E.info, 10, 400, MONO, 1.4, 0.02);
-    center(E.adresse, 10, 400, MONO, 1.4, 0.02);
-    hr();
-    center('REÇU DE TRANSPORT', 17, 800, DISP, 1.25, 0.1);
-    pair('N°', r.num);
-    pair('Date', showDate(r.date));
-    hr();
-    pair('Nom', r.nom);
-    pair('Destination', r.dest);
-    pair('Tél. dest.', r.tel);
-    pair('Colis', r.colis);
-    hr();
-    y += px(4); pair('Somme', fmt(s) + ' F CFA', 15, 600);
-    if (s) {
-      y += px(4); font(10, 400, MONO, 'italic'); ctx.textAlign = 'left';
-      for (const l of wrap(ctx, `Arrêté à la somme de ${lettres(s)} francs CFA.`, CW)) { y += px(14); ctx.fillText(l, M, y - px(3)); }
-    }
-    y += px(10);
-    center(E.slogan, 9.5, 600, MONO, 1.4);
-    center('Merci de votre confiance.', 9.5, 400, MONO, 1.4);
-    center('Conservez ce reçu pour retirer vos colis.', 9.5, 400, MONO, 1.4);
-    y += px(6);
+    t.center(E.sigle, 26, 800, DISP, 1.05, 0.12);
+    t.center(E.nom, 10, 400, MONO, 1.4, 0.02);
+    t.gap(2); t.center(E.gerant, 16, 800, DISP, 1.15, 0.08);
+    t.center(E.tel, 10, 400, MONO, 1.4, 0.02);
+    t.center(E.lignes, 10, 400, MONO, 1.4, 0.02);
+    t.center(E.info, 10, 400, MONO, 1.4, 0.02);
+    t.center(E.adresse, 10, 400, MONO, 1.4, 0.02);
+    t.hr();
+    t.center(title, 17, 800, DISP, 1.25, 0.1);
 
-    const out = document.createElement('canvas'); out.width = W; out.height = Math.ceil(y);
+    body(t);
+
+    t.gap(10);
+    t.center(E.slogan, 9.5, 600, MONO, 1.4);
+    t.center('Merci de votre confiance.', 9.5, 400, MONO, 1.4);
+    t.center('Conservez ce reçu pour retirer vos colis.', 9.5, 400, MONO, 1.4);
+    t.gap(6);
+
+    const out = document.createElement('canvas'); out.width = W; out.height = Math.ceil(t.y);
     out.getContext('2d').drawImage(c, 0, 0);
     return out;
   }
 
-  /* Tramage Floyd–Steinberg (pour le logo) : résultat en noir/blanc pur. */
-  function dither(ctx, w, h) {
-    const img = ctx.getImageData(0, 0, w, h), d = img.data, g = new Float32Array(w * h);
-    for (let i = 0; i < w * h; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
-    for (let yy = 0; yy < h; yy++) for (let x = 0; x < w; x++) {
-      const i = yy * w + x, o = g[i], n = o < 128 ? 0 : 255, e = o - n; g[i] = n;
-      if (x + 1 < w) g[i + 1] += e * 7 / 16;
-      if (yy + 1 < h) { if (x > 0) g[i + w - 1] += e * 3 / 16; g[i + w] += e * 5 / 16; if (x + 1 < w) g[i + w + 1] += e / 16; }
-    }
-    for (let i = 0; i < w * h; i++) { d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = g[i]; d[i * 4 + 3] = 255; }
-    ctx.putImageData(img, 0, 0);
+  function ticketCanvas(r) {
+    const { fmt, showDate, lettres } = window.TBTB, s = Number(r.somme) || 0;
+    return draw('REÇU DE TRANSPORT', t => {
+      t.pair('N°', r.num);
+      t.pair('Date', showDate(r.date));
+      t.hr();
+      t.pair('Nom', r.nom);
+      t.pair('Destination', r.dest);
+      t.pair('Tél. dest.', r.tel);
+      t.pair('Colis', r.colis);
+      t.hr();
+      t.gap(4); t.pair('Somme', fmt(s) + ' F CFA', 15, 600);
+      if (s) { t.gap(4); t.para(`Arrêté à la somme de ${lettres(s)} francs CFA.`, 10, 400, 'italic'); }
+    });
+  }
+
+  /* Relevé groupé : g = { nom, periode, items: [reçus], colis, somme } */
+  function releveCanvas(g) {
+    const { fmt, showDate, lettres } = window.TBTB;
+    return draw('RELEVÉ CLIENT', t => {
+      t.pair('Nom', g.nom);
+      t.pair('Période', g.periode);
+      t.pair('Reçus', String(g.items.length));
+      t.hr();
+      g.items.forEach((r, i) => {
+        if (i) t.gap(5);
+        t.pair(r.num, fmt(r.somme) + ' F', 11.5, 600, 600);
+        t.para(`${showDate(r.date)} · ${r.dest || '—'} · ${r.colis || '—'}`, 10);
+      });
+      t.hr();
+      t.pair('Total colis', String(g.colis));
+      t.gap(4); t.pair('Total', fmt(g.somme) + ' F CFA', 15, 600);
+      if (g.somme) { t.gap(4); t.para(`Arrêté à la somme de ${lettres(g.somme)} francs CFA.`, 10, 400, 'italic'); }
+    });
   }
 
   /* Canvas → ESC/POS raster, par bandes de 128 lignes (évite de saturer le tampon). */
@@ -145,5 +175,7 @@
   }
 
   window.TBTB.ticketCanvas = ticketCanvas;
+  window.TBTB.releveCanvas = releveCanvas;
   window.TBTB.ticketEscPos = async r => canvasToEscPos(await ticketCanvas(r));
+  window.TBTB.releveEscPos = async g => canvasToEscPos(await releveCanvas(g));
 })();

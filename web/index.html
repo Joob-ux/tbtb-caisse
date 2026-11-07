@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Caisse T.B.T.B</title>
+<title>Caisse T.B.T.L</title>
 <meta name="theme-color" content="#1f3fae">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -72,6 +72,16 @@
         <div class="stat"><small>Reçus aujourd'hui</small><strong id="s-count">0</strong></div>
         <div class="stat"><small>Caisse du jour</small><strong id="s-total">0 F</strong></div>
         <div class="stat"><small>Colis du jour</small><strong id="s-colis">0</strong></div>
+      </div>
+      <div class="panel" id="grp">
+        <h2>Regrouper par client</h2>
+        <div class="row">
+          <label>Nom du client<input id="g-nom" type="text" list="clients" autocomplete="off" placeholder="Choisir ou taper un nom"></label>
+          <label>Période<select id="g-per"><option value="day">Aujourd'hui</option><option value="all">Tout l'historique</option></select></label>
+        </div>
+        <datalist id="clients"></datalist>
+        <p class="msg" id="g-sum">Choisissez un client pour voir ses reçus.</p>
+        <div class="actions"><button type="button" class="btn primary" id="g-print" disabled>Imprimer le relevé</button></div>
       </div>
       <div class="tbl">
         <table>
