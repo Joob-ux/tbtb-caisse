@@ -83,6 +83,19 @@
         <p class="msg" id="g-sum">Choisissez un client pour voir ses reçus.</p>
         <div class="actions"><button type="button" class="btn primary" id="g-print" disabled>Imprimer le relevé</button></div>
       </div>
+      <div class="panel" id="sync">
+        <h2>Suivi à distance</h2>
+        <p class="msg" id="sy-etat">Les reçus peuvent être envoyés sur internet pour être consultés depuis le téléphone du gérant.</p>
+        <form id="sy-form" class="row" novalidate>
+          <label>Email du gérant<input id="sy-email" type="email" autocomplete="username" inputmode="email"></label>
+          <label>Mot de passe<input id="sy-mdp" type="password" autocomplete="current-password"></label>
+          <div class="actions"><button type="submit" class="btn primary" id="sy-btn">Connecter la caisse</button></div>
+        </form>
+        <div class="actions" id="sy-actions" hidden>
+          <button type="button" class="btn primary" id="sy-push">Envoyer maintenant</button>
+          <button type="button" class="btn ghost" id="sy-out">Déconnecter</button>
+        </div>
+      </div>
       <div class="tbl">
         <table>
           <thead><tr><th>N°</th><th>Date</th><th>Nom</th><th>Destination</th><th>Tél. destinataire</th><th>Colis</th><th style="text-align:right">Somme</th><th></th></tr></thead>
@@ -97,5 +110,6 @@
 <script src="ticket-pdf.js"></script>
 <script src="ticket-escpos.js"></script>
 <script src="app.js"></script>
+<script src="suivi-sync.js"></script>
 </body>
 </html>
