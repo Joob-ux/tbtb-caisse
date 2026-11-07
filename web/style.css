@@ -108,3 +108,6 @@ a.btn{text-decoration:none;text-align:center}
 }
 
 [hidden]{display:none!important}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.chips .mini{padding:7px 12px;font-size:13px}
+#grp label + .row{margin-top:10px}
