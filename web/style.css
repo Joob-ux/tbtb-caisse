@@ -71,6 +71,7 @@ input:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid 
 .t-colis b{font-weight:700}
 #f-colis{font-size:18px;font-weight:600}
 .req{color:var(--err);font-style:normal}
+.lbl{font-weight:inherit}
 .t-words{font-size:10px;font-style:italic;margin-top:4px}
 .t-foot{font-size:9.5px;margin-top:10px}
 /* Historique */
