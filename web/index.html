@@ -36,10 +36,9 @@
       </div>
       <label><b class="lbl">Nom du client <i class="req">*</i></b><input id="f-nom" type="text" autocomplete="off" placeholder="Ex. Moussa Ndiaye"></label>
       <div class="row">
-        <label>Destination<input id="f-dest" type="text" list="destinations" autocomplete="off" placeholder="Ex. Touba"></label>
+        <label>Destination<select id="f-dest-sel"><option value="">— Choisir —</option><option>Ranirou</option><option>Ouressogui</option><option>Kanel</option><option>S’enthiou Bambaye</option><option>Ndendory</option><option>Hounare</option><option>Bosiabe</option><option>Orkadiere</option><option>Gasambiry</option><option>Sème</option><option>Aore</option><option>Diamogel</option><option>Dounde</option><option>Bokiladji</option><option>Thianiaf</option><option>Bondji</option><option>Bakel</option><option value="*">Autre (écrire)…</option></select><input id="f-dest" type="text" autocomplete="off" placeholder="Écrire la destination" hidden></label>
         <label>Tél. du destinataire<input id="f-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="77 123 45 67"></label>
       </div>
-      <datalist id="destinations"><option value="Dakar"><option value="Touba"><option value="Ourossogui"><option value="Bakel"></datalist>
       <div class="row">
         <label><b class="lbl">Colis <i class="req">*</i></b><input id="f-colis" type="text" autocomplete="off" placeholder="Ex. 3 cartons"></label>
         <label class="amount"><b class="lbl">Somme <i class="req">*</i></b><input id="f-somme" type="text" inputmode="numeric" placeholder="0"><span>F CFA</span></label>

@@ -144,13 +144,20 @@ $('btn-share').onclick = async () => {
 /* Formulaire */
 function resetForm() {
   $('f-num').value = nextNum(); $('f-date').value = toLocalInput(new Date());
-  $('f-nom').value = ''; $('f-dest').value = ''; $('f-tel').value = ''; $('f-colis').value = ''; $('f-somme').value = '';
+  $('f-nom').value = ''; $('f-dest').value = ''; $('f-dest-sel').value = ''; $('f-dest').hidden = true; $('f-tel').value = ''; $('f-colis').value = ''; $('f-somme').value = '';
   $('msg').hidden = true; $('done').hidden = true; render(); $('f-nom').focus();
 }
 ['f-date', 'f-nom', 'f-dest', 'f-colis'].forEach(id => $(id).addEventListener('input', render));
 $('f-tel').addEventListener('input', e => { e.target.value = telFmt(e.target.value); render(); });
 $('f-somme').addEventListener('input', e => { const n = e.target.value.replace(/\D/g, ''); e.target.value = n ? fmt(n) : ''; render(); });
 $('reset').onclick = resetForm;
+/* Destination : choix dans la liste, ou « Autre » pour l'écrire */
+$('f-dest-sel').addEventListener('change', e => {
+  const v = e.target.value, autre = v === '*';
+  $('f-dest').hidden = !autre; $('f-dest').value = autre ? '' : v;
+  if (autre) $('f-dest').focus();
+  render();
+});
 $('form').addEventListener('submit', e => {
   e.preventDefault(); const r = current(), m = $('msg');
   /* Obligatoires : nom, colis et somme ; le reste est facultatif. Une date vide prend l'heure actuelle */
