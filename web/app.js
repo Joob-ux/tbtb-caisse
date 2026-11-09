@@ -21,8 +21,12 @@ $('btn-submit').textContent = ANDROID_PRINT ? 'Valider et imprimer' : 'Valider e
 /* Stockage local (sur l'appareil) */
 function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(v)) return v; } catch (e) {} return []; }
 let recus = load();
-function save() { try { localStorage.setItem(KEY, JSON.stringify(recus)); } catch (e) {} }
-function nextNum() { const max = recus.reduce((m, r) => Math.max(m, parseInt(r.num.split('-')[1]) || 0), 0); return 'TBTL-' + String(max + 1).padStart(6, '0'); }
+/* Le plus grand numéro déjà utilisé est gardé à part : après une suppression, la numérotation continue (jamais deux reçus avec le même numéro) */
+const K_MAX = 'tbtb_dernier_num';
+const maxNum = () => recus.reduce((m, r) => Math.max(m, parseInt(String(r.num).split('-')[1]) || 0), 0);
+const maxGarde = () => { try { return parseInt(localStorage.getItem(K_MAX)) || 0; } catch (e) { return 0; } };
+function save() { try { localStorage.setItem(KEY, JSON.stringify(recus)); localStorage.setItem(K_MAX, String(Math.max(maxGarde(), maxNum()))); } catch (e) {} }
+function nextNum() { return 'TBTL-' + String(Math.max(maxNum(), maxGarde()) + 1).padStart(6, '0'); }
 
 /* Aperçu écran */
 const truck = `<svg viewBox="0 0 64 36" aria-hidden="true"><rect x="1" y="4" width="38" height="22" fill="#111"/><path d="M41 10h12l9 9v7H41z" fill="#111"/><rect x="45" y="13" width="7" height="6" fill="#fff"/><circle cx="12" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/><circle cx="51" cy="29" r="5" fill="#111" stroke="#fff" stroke-width="2"/></svg>`;
@@ -180,7 +184,7 @@ function renderHist() {
   $('s-total').textContent = fmt(t.reduce((s, r) => s + r.somme, 0)) + ' F';
   $('s-colis').textContent = t.reduce((s, r) => s + (parseInt(r.colis) || 0), 0);
   const liste = filtre(), actif = !!($('g-nom').value.trim() || $('g-du').value || $('g-au').value);
-  $('h-body').innerHTML = liste.length ? liste.map(({ r, i }) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${ANDROID_PRINT ? `<button class="mini" data-i="${i}" data-a="print">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`}</td></tr>`).join('')
+  $('h-body').innerHTML = liste.length ? liste.map(({ r, i }) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${ANDROID_PRINT ? `<button class="mini" data-i="${i}" data-a="print">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`} <button class="mini" data-i="${i}" data-a="del">Supprimer</button></td></tr>`).join('')
     : `<tr><td colspan="8" style="color:var(--muted)">${actif ? 'Aucun reçu ne correspond à cette recherche.' : 'Aucun reçu pour l\'instant. Les reçus validés apparaîtront ici.'}</td></tr>`;
   renderGroupe(liste.map(x => x.r));
 }
@@ -217,7 +221,36 @@ function renderGroupe(list) {
   else if (g && g.plusieurs) { s.className = 'msg'; s.textContent = resume + '. Plusieurs clients correspondent : choisissez le nom complet dans la liste pour imprimer son relevé.'; }
   else { s.className = 'msg ok'; s.textContent = resume + (g ? ' pour ' + g.nom : '') + '.'; }
   $('g-print').disabled = !(g && g.items.length && !g.plusieurs);
+  const b = $('g-del'); b.disabled = !n; b.dataset.ok = ''; b.classList.remove('danger');
+  b.textContent = n === recus.length ? "Supprimer tout l'historique" : `Supprimer ${n > 1 ? 'ces ' + n + ' reçus' : 'ce reçu'}`;
 }
+/* Suppression : il faut appuyer deux fois (la 2e fois pour confirmer, dans les 5 secondes) */
+function confirmer(btn, label, action) {
+  if (btn.dataset.ok === '1') { action(); return; }
+  const old = btn.textContent; btn.dataset.ok = '1'; btn.textContent = label; btn.classList.add('danger');
+  setTimeout(() => { if (btn.isConnected && btn.dataset.ok === '1') { btn.dataset.ok = ''; btn.textContent = old; btn.classList.remove('danger'); } }, 5000);
+}
+/* Reçus pas encore partis vers le suivi à distance (seulement si la caisse y est connectée) */
+function nonEnvoyes(list) {
+  try {
+    if (!localStorage.getItem('tbtb_suivi_jeton')) return [];
+    const ok = new Set(JSON.parse(localStorage.getItem('tbtb_suivi_envoyes')) || []);
+    return list.filter(r => !ok.has(r.num));
+  } catch (e) { return []; }
+}
+function supprimer(list) {
+  const s = $('g-sum'), bloques = nonEnvoyes(list);
+  if (bloques.length) {
+    renderHist(); s.className = 'msg err';
+    s.textContent = `${bloques.length > 1 ? bloques.length + ' de ces reçus ne sont' : "Ce reçu n'est"} pas encore envoyé${bloques.length > 1 ? 's' : ''} au suivi à distance. Appuyez sur « Envoyer maintenant » (plus bas), puis recommencez.`;
+    return;
+  }
+  save();   // garde le dernier numéro avant de supprimer
+  const del = new Set(list.map(r => r.num)); recus = recus.filter(r => !del.has(r.num)); save();
+  renderHist(); s.className = 'msg ok'; s.textContent = `${list.length} reçu${list.length > 1 ? 's supprimés' : ' supprimé'} de cette caisse.`;
+}
+$('g-del').onclick = () => { const list = filtre().map(x => x.r); if (!list.length) return;
+  confirmer($('g-del'), `Appuyez encore pour supprimer ${list.length > 1 ? 'les ' + list.length + ' reçus' : 'le reçu'}`, () => supprimer(list)); };
 function releveText(g) {
   const E = window.TBTB.ENTREPRISE, L = '--------------------------------';
   const line = (a, b) => { a = String(a); b = String(b || '—'); return a + ' '.repeat(Math.max(1, 32 - a.length - b.length)) + b + '\n'; };
@@ -265,6 +298,7 @@ $('g-print').onclick = () => { const g = groupe(); if (g && g.items.length && !g
 $('h-body').addEventListener('click', async e => {
   const b = e.target.closest('button[data-i]'); if (!b) return;
   const r = recus[+b.dataset.i];
+  if (b.dataset.a === 'del') { confirmer(b, 'Confirmer ?', () => supprimer([r])); return; }
   if (ANDROID_PRINT) { printViaRawBT(r); return; }
   if (b.dataset.a === 'print') { printTicket(r); return; }
   makePDF(r);

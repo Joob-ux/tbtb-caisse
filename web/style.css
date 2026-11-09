@@ -112,3 +112,4 @@ a.btn{text-decoration:none;text-align:center}
 .chips .mini{padding:7px 12px;font-size:13px}
 #grp label + .row{margin-top:10px}
 #f-dest-sel + input{margin-top:6px}
+.btn.danger,.mini.danger{background:var(--err);color:#fff;border-color:var(--err)}
