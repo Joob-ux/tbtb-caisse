@@ -141,15 +141,15 @@
   /* Relevé groupé : g = { nom, periode, items: [reçus], colis, somme } */
   function releveCanvas(g) {
     const { fmt, showDate, lettres } = window.TBTB;
-    return draw('RELEVÉ CLIENT', t => {
-      t.pair('Nom', g.nom);
+    return draw(g.titre || 'RELEVÉ CLIENT', t => {
+      (g.entete || [['Nom', g.nom]]).forEach(([a, b]) => t.pair(a, b));
       t.pair('Période', g.periode);
       t.pair('Reçus', String(g.items.length));
       t.hr();
       g.items.forEach((r, i) => {
         if (i) t.gap(5);
         t.pair(r.num, fmt(r.somme) + ' F', 11.5, 600, 600);
-        t.para([showDate(r.date), r.dest, r.colis].filter(Boolean).join(' · '), 10);
+        t.para([showDate(r.date), g.liste ? r.nom : '', r.dest, r.colis].filter(Boolean).join(' · '), 10);
       });
       t.hr();
       t.pair('Total colis', String(g.colis));

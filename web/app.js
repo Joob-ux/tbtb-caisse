@@ -227,6 +227,7 @@ function renderGroupe(list) {
   else if (g && g.plusieurs) { s.className = 'msg'; s.textContent = resume + '. Plusieurs clients correspondent : choisissez le nom complet dans la liste pour imprimer son relevé.'; }
   else { s.className = 'msg ok'; s.textContent = resume + (g ? ' pour ' + g.nom : '') + ($('g-dest').value ? ' vers ' + $('g-dest').value : '') + '.'; }
   $('g-print').disabled = !(g && g.items.length && !g.plusieurs);
+  $('g-plist').disabled = !n;
   const b = $('g-del'); b.disabled = !n; b.dataset.ok = ''; b.classList.remove('danger');
   b.textContent = n === recus.length ? "Supprimer tout l'historique" : `Supprimer ${n > 1 ? 'ces ' + n + ' reçus' : 'ce reçu'}`;
 }
@@ -260,9 +261,10 @@ $('g-del').onclick = () => { const list = filtre().map(x => x.r); if (!list.leng
 function releveText(g) {
   const E = window.TBTB.ENTREPRISE, L = '--------------------------------';
   const line = (a, b) => { a = String(a); b = String(b || '—'); return a + ' '.repeat(Math.max(1, 32 - a.length - b.length)) + b + '\n'; };
-  let t = `        ${E.sigle}\n${E.nom}\n${E.gerant}\n${E.tel}\n${L}\n      RELEVE CLIENT\n${L}\n`;
-  t += line('Nom', g.nom) + line('Période', g.periode) + line('Reçus', g.items.length) + L + '\n';
-  g.items.forEach(r => { t += line(r.num, fmt(r.somme) + ' F') + `${[showDate(r.date), r.dest, r.colis].filter(Boolean).join(' ')}\n`; });
+  let t = `        ${E.sigle}\n${E.nom}\n${E.gerant}\n${E.tel}\n${L}\n      ${g.titre ? normNom(g.titre).toUpperCase() : 'RELEVE CLIENT'}\n${L}\n`;
+  (g.entete || [['Nom', g.nom]]).forEach(([a, b]) => { t += line(a, b); });
+  t += line('Période', g.periode) + line('Reçus', g.items.length) + L + '\n';
+  g.items.forEach(r => { t += line(r.num, fmt(r.somme) + ' F') + `${[showDate(r.date), g.liste ? r.nom : '', r.dest, r.colis].filter(Boolean).join(' ')}\n`; });
   t += L + '\n' + line('Total colis', g.colis) + line('Total', fmt(g.somme) + ' F CFA');
   t += `\nArrêté à la somme de ${lettres(g.somme)} francs CFA.\n${L}\n   ${E.slogan}\nMerci de votre confiance.\n\n\n`;
   return t;
@@ -271,10 +273,10 @@ function releveHTML(g) {
   const E = window.TBTB.ENTREPRISE;
   return `<div class="t-c"><div class="t-logo">${window.TBTB_LOGO ? `<img class="t-img" src="${window.TBTB_LOGO}" alt="">` : truck}</div><div class="t-name">${E.sigle}</div>
     <div class="t-sub">${E.nom}</div><div class="t-djily">${E.gerant}</div><div class="t-sub">${E.tel}</div><div class="t-sub">${E.lignes}</div><div class="t-sub">${E.adresse}</div></div>
-  <hr class="t-hr"><div class="t-c t-title">Relevé client</div>
-  <div class="t-line"><span>Nom</span><b>${esc(g.nom)}</b></div><div class="t-line"><span>Période</span><b>${esc(g.periode)}</b></div>
+  <hr class="t-hr"><div class="t-c t-title">${esc(g.titre || 'Relevé client')}</div>
+  ${(g.entete || [['Nom', g.nom]]).map(([a, b]) => `<div class="t-line"><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join('')}<div class="t-line"><span>Période</span><b>${esc(g.periode)}</b></div>
   <div class="t-line"><span>Reçus</span><b>${g.items.length}</b></div><hr class="t-hr">
-  ${g.items.map(r => `<div class="t-line"><b>${esc(r.num)}</b><b>${fmt(r.somme)} F</b></div><div class="t-sub">${esc([showDate(r.date), r.dest, r.colis].filter(Boolean).join(' · '))}</div>`).join('<div style="height:4px"></div>')}
+  ${g.items.map(r => `<div class="t-line"><b>${esc(r.num)}</b><b>${fmt(r.somme)} F</b></div><div class="t-sub">${esc([showDate(r.date), g.liste ? r.nom : '', r.dest, r.colis].filter(Boolean).join(' · '))}</div>`).join('<div style="height:4px"></div>')}
   <hr class="t-hr"><div class="t-line"><span>Total colis</span><b>${g.colis}</b></div>
   <div class="t-line t-total"><span>Total</span><b>${fmt(g.somme)} F CFA</b></div>
   <div class="t-words">Arrêté à la somme de ${lettres(g.somme)} francs CFA.</div>
@@ -300,6 +302,17 @@ document.querySelectorAll('#grp .chips [data-p]').forEach(b => b.addEventListene
   if (p === 'all') { $('g-nom').value = ''; $('g-dest').value = ''; }
   $('g-du').value = du; $('g-au').value = au; renderHist();
 }));
+/* Liste affichée par la recherche (ex. une destination sur une période), imprimée sur un seul ticket */
+function listeGroupe() {
+  const items = filtre().map(x => x.r).sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (!items.length) return null;
+  const fr = v => v.split('-').reverse().join('/'), d = r => showDate(r.date).slice(0, 10);
+  let du = $('g-du').value, au = $('g-au').value; if (du && au && du > au) [du, au] = [au, du];
+  const from = du ? fr(du) : d(items[0]), to = au ? fr(au) : d(items[items.length - 1]);
+  return Object.assign({ titre: 'Liste des reçus', liste: true, nom: '', items, periode: from === to ? from : `${from} au ${to}`,
+    entete: [['Destination', $('g-dest').value || 'Toutes'], ['Client', $('g-nom').value.trim() || 'Tous']] }, totaux(items));
+}
+$('g-plist').onclick = () => { const g = listeGroupe(); if (g) printReleve(g); };
 $('g-print').onclick = () => { const g = groupe(); if (g && g.items.length && !g.plusieurs) printReleve(g); };
 
 $('h-body').addEventListener('click', async e => {
