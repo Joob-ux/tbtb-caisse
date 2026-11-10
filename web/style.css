@@ -113,3 +113,4 @@ a.btn{text-decoration:none;text-align:center}
 #grp label + .row{margin-top:10px}
 #f-dest-sel + input{margin-top:6px}
 .btn.danger,.mini.danger{background:var(--err);color:#fff;border-color:var(--err)}
+.g-gap{margin-top:10px}

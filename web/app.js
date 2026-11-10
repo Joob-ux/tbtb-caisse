@@ -183,7 +183,7 @@ function renderHist() {
   $('s-count').textContent = t.length;
   $('s-total').textContent = fmt(t.reduce((s, r) => s + r.somme, 0)) + ' F';
   $('s-colis').textContent = t.reduce((s, r) => s + (parseInt(r.colis) || 0), 0);
-  const liste = filtre(), actif = !!($('g-nom').value.trim() || $('g-du').value || $('g-au').value);
+  const liste = filtre(), actif = !!($('g-nom').value.trim() || $('g-dest').value || $('g-du').value || $('g-au').value);
   $('h-body').innerHTML = liste.length ? liste.map(({ r, i }) => `<tr><td>${esc(r.num)}</td><td>${esc(showDate(r.date))}</td><td>${esc(r.nom)}</td><td>${esc(r.dest || '')}</td><td>${esc(r.tel || '')}</td><td>${esc(r.colis)}</td><td class="num">${fmt(r.somme)} F</td><td style="white-space:nowrap">${ANDROID_PRINT ? `<button class="mini" data-i="${i}" data-a="print">Réimprimer</button>` : `<button class="mini" data-i="${i}" data-a="print">Imprimer</button> <button class="mini" data-i="${i}" data-a="pdf">PDF</button>`} <button class="mini" data-i="${i}" data-a="del">Supprimer</button></td></tr>`).join('')
     : `<tr><td colspan="8" style="color:var(--muted)">${actif ? 'Aucun reçu ne correspond à cette recherche.' : 'Aucun reçu pour l\'instant. Les reçus validés apparaîtront ici.'}</td></tr>`;
   renderGroupe(liste.map(x => x.r));
@@ -193,12 +193,12 @@ function renderHist() {
 const normNom = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const jour = v => { const d = new Date(v); return isNaN(d) ? '' : toLocalInput(d).slice(0, 10); };
 function filtre() {
-  const key = normNom($('g-nom').value);
+  const key = normNom($('g-nom').value), dest = normNom($('g-dest').value);
   let du = $('g-du').value, au = $('g-au').value;
   if (du && au && du > au) [du, au] = [au, du];
   return recus.map((r, i) => ({ r, i })).filter(({ r }) => {
     const j = jour(r.date);
-    return (!key || normNom(r.nom).includes(key)) && (!du || j >= du) && (!au || j <= au);
+    return (!key || normNom(r.nom).includes(key)) && (!dest || normNom(r.dest) === dest) && (!du || j >= du) && (!au || j <= au);
   });
 }
 const totaux = items => ({ colis: items.reduce((s, r) => s + (parseInt(r.colis) || 0), 0), somme: items.reduce((s, r) => s + (Number(r.somme) || 0), 0) });
@@ -213,13 +213,19 @@ function groupe(list) {
 }
 function renderGroupe(list) {
   list = list || filtre().map(x => x.r);
+  /* Liste des destinations : celles de la caisse, puis les autres déjà utilisées dans les reçus */
+  const sel = $('g-dest'), choix = sel.value, villes = new Map();
+  [...$('f-dest-sel').options].forEach(o => { if (o.value && o.value !== '*') villes.set(normNom(o.value), o.value); });
+  recus.forEach(r => { const k = normNom(r.dest); if (k && !villes.has(k)) villes.set(k, r.dest); });
+  sel.innerHTML = '<option value="">Toutes les destinations</option>' + [...villes.values()].map(v => `<option>${esc(v)}</option>`).join('');
+  sel.value = choix;
   const names = new Map(); recus.forEach(r => { const k = normNom(r.nom); if (k && !names.has(k)) names.set(k, r.nom); });
   $('clients').innerHTML = [...names.values()].map(n => `<option value="${esc(n)}">`).join('');
   const g = groupe(list), s = $('g-sum'), t = totaux(list), n = list.length;
   const resume = `${n} reçu${n > 1 ? 's' : ''} · ${t.colis} colis · ${fmt(t.somme)} F CFA`;
-  if (!n) { s.className = 'msg err'; s.textContent = recus.length ? 'Aucun reçu ne correspond. Changez le nom ou les dates.' : 'Aucun reçu pour l\'instant.'; }
+  if (!n) { s.className = 'msg err'; s.textContent = recus.length ? 'Aucun reçu ne correspond. Changez le nom, la destination ou les dates.' : 'Aucun reçu pour l\'instant.'; }
   else if (g && g.plusieurs) { s.className = 'msg'; s.textContent = resume + '. Plusieurs clients correspondent : choisissez le nom complet dans la liste pour imprimer son relevé.'; }
-  else { s.className = 'msg ok'; s.textContent = resume + (g ? ' pour ' + g.nom : '') + '.'; }
+  else { s.className = 'msg ok'; s.textContent = resume + (g ? ' pour ' + g.nom : '') + ($('g-dest').value ? ' vers ' + $('g-dest').value : '') + '.'; }
   $('g-print').disabled = !(g && g.items.length && !g.plusieurs);
   const b = $('g-del'); b.disabled = !n; b.dataset.ok = ''; b.classList.remove('danger');
   b.textContent = n === recus.length ? "Supprimer tout l'historique" : `Supprimer ${n > 1 ? 'ces ' + n + ' reçus' : 'ce reçu'}`;
@@ -286,11 +292,12 @@ async function printReleve(g) {
   setTimeout(() => window.print(), 50);
 }
 ['g-nom', 'g-du', 'g-au'].forEach(id => $(id).addEventListener('input', renderHist));
+$('g-dest').addEventListener('change', renderHist);
 ['g-du', 'g-au'].forEach(id => $(id).addEventListener('change', renderHist));
 document.querySelectorAll('#grp .chips [data-p]').forEach(b => b.addEventListener('click', () => {
   const now = new Date(), d = n => { const x = new Date(now); x.setDate(x.getDate() - n); return jour(x); }, p = b.dataset.p;
   const [du, au] = p === 'today' ? [d(0), d(0)] : p === 'yday' ? [d(1), d(1)] : p === '7' ? [d(6), d(0)] : p === 'month' ? [d(0).slice(0, 8) + '01', d(0)] : ['', ''];
-  if (p === 'all') $('g-nom').value = '';
+  if (p === 'all') { $('g-nom').value = ''; $('g-dest').value = ''; }
   $('g-du').value = du; $('g-au').value = au; renderHist();
 }));
 $('g-print').onclick = () => { const g = groupe(); if (g && g.items.length && !g.plusieurs) printReleve(g); };
