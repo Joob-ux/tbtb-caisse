@@ -164,8 +164,8 @@ $('f-dest-sel').addEventListener('change', e => {
 });
 $('form').addEventListener('submit', e => {
   e.preventDefault(); const r = current(), m = $('msg');
-  /* Obligatoires : nom, colis et somme ; le reste est facultatif. Une date vide prend l'heure actuelle */
-  const missing = []; if (!r.nom) missing.push('le nom'); if (!r.colis) missing.push('le colis'); if (!r.somme) missing.push('la somme');
+  /* Obligatoires : nom, destination, colis et somme ; le reste est facultatif. Une date vide prend l'heure actuelle */
+  const missing = []; if (!r.nom) missing.push('le nom'); if (!r.dest) missing.push('la destination'); if (!r.colis) missing.push('le colis'); if (!r.somme) missing.push('la somme');
   if (missing.length) { m.className = 'msg err'; m.textContent = 'Renseignez ' + missing.join(', ').replace(/, ([^,]*)$/, ' et $1') + ' avant de valider.'; m.hidden = false; return; }
   if (!r.date) { r.date = toLocalInput(new Date()); $('f-date').value = r.date; }
   if (recus.some(x => x.num === r.num)) { m.className = 'msg err'; m.textContent = 'Ce reçu est déjà enregistré. Appuyez sur « Nouveau ».'; m.hidden = false; return; }
