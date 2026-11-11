@@ -34,7 +34,7 @@
         <label>Date<input id="f-date" type="datetime-local"></label>
         <label>N° de reçu<input id="f-num" type="text" readonly></label>
       </div>
-      <label><b class="lbl">Nom du client <i class="req">*</i></b><input id="f-nom" type="text" autocomplete="off" placeholder="Ex. Moussa Ndiaye"></label>
+      <label class="sugg-wrap"><b class="lbl">Nom du client <i class="req">*</i></b><input id="f-nom" type="text" autocomplete="off" placeholder="Ex. Moussa Ndiaye" aria-autocomplete="list" aria-controls="nom-sugg"><div id="nom-sugg" class="sugg" role="listbox" hidden></div></label>
       <div class="row">
         <label><b class="lbl">Destination <i class="req">*</i></b><select id="f-dest-sel"><option value="">— Choisir —</option><option>Bakel</option><option>Hounare</option><option>S’enthiou Bambay</option><option>Kanel</option><option>Orkadiere</option><option>Bondji</option><option>Thianiaf</option><option>Bokiladji</option><option>Dounde</option><option>Dialloube</option><option>Diamogel</option><option>Aore</option><option>Séme</option><option>Gasambiry</option><option>Bosiabe</option><option>Ndendory</option><option>Ouressogui</option><option>Ranirou</option><option value="*">Autre (écrire)…</option></select><input id="f-dest" type="text" autocomplete="off" placeholder="Écrire la destination" hidden></label>
         <label>Tél. du destinataire<input id="f-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="77 123 45 67"></label>

@@ -114,3 +114,9 @@ a.btn{text-decoration:none;text-align:center}
 #f-dest-sel + input{margin-top:6px}
 .btn.danger,.mini.danger{background:var(--err);color:#fff;border-color:var(--err)}
 .g-gap{margin-top:10px}
+/* Suggestions du nom du client */
+.sugg-wrap{position:relative}
+.sugg{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.15);overflow:hidden;display:flex;flex-direction:column}
+.sugg button{border:0;border-bottom:1px solid var(--line);background:none;color:var(--fg);font:500 16px var(--f-body);text-align:left;padding:12px;cursor:pointer;text-transform:none;letter-spacing:0}
+.sugg button:last-child{border-bottom:0}
+.sugg button:hover,.sugg button:active{background:var(--brand-soft)}

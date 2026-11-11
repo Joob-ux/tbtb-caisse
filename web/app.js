@@ -155,6 +155,34 @@ function resetForm() {
 $('f-tel').addEventListener('input', e => { e.target.value = telFmt(e.target.value); render(); });
 $('f-somme').addEventListener('input', e => { const n = e.target.value.replace(/\D/g, ''); e.target.value = n ? fmt(n) : ''; render(); });
 $('reset').onclick = resetForm;
+/* Nom du client : dès les premières lettres, les clients déjà enregistrés sont proposés
+   (début du nom ou d'un des mots : « ndi » trouve « Moussa Ndiaye »). Les plus récents d'abord. */
+function clientsConnus() {
+  const m = new Map(); recus.forEach(r => { const k = normNom(r.nom); if (k && !m.has(k)) m.set(k, r.nom.trim()); });
+  return [...m.entries()];
+}
+function suggNom() {
+  const box = $('nom-sugg'), key = normNom($('f-nom').value);
+  if (!key) { box.hidden = true; return; }
+  const debut = [], mot = [];
+  clientsConnus().forEach(([k, n]) => {
+    if (k === key) return;
+    if (k.startsWith(key)) debut.push(n); else if (k.split(' ').some(w => w.startsWith(key))) mot.push(n);
+  });
+  const list = debut.concat(mot).slice(0, 6);
+  box.innerHTML = list.map(n => `<button type="button" role="option" tabindex="-1">${esc(n)}</button>`).join('');
+  box.hidden = !list.length;
+}
+$('f-nom').addEventListener('input', suggNom);
+$('f-nom').addEventListener('focus', suggNom);
+$('f-nom').addEventListener('blur', () => setTimeout(() => { $('nom-sugg').hidden = true; }, 150));
+$('f-nom').addEventListener('keydown', e => { if (e.key === 'Escape') $('nom-sugg').hidden = true; });
+/* mousedown (avant la perte du focus) pour que le choix soit pris au toucher comme à la souris */
+$('nom-sugg').addEventListener('mousedown', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  e.preventDefault(); $('f-nom').value = b.textContent; $('nom-sugg').hidden = true; render();
+  ($('f-dest-sel').value ? $('f-colis') : $('f-dest-sel')).focus();
+});
 /* Destination : choix dans la liste, ou « Autre » pour l'écrire */
 $('f-dest-sel').addEventListener('change', e => {
   const v = e.target.value, autre = v === '*';
