@@ -2,7 +2,7 @@
    Les reçus restent d'abord sur l'appareil ; ils partent dès qu'il y a internet (réessai automatique).
    Le gérant les consulte sur son téléphone à l'adresse SUIVI_URL. */
 (function () {
-  const K_RECUS = 'tbtb_recus_v1', K_JETON = 'tbtb_suivi_jeton', K_OK = 'tbtb_suivi_envoyes', K_APP = 'tbtb_appareil';
+  const K_RECUS = 'tbtb_recus_v1', K_JETON = 'tbtb_suivi_jeton', K_OK = 'tbtb_suivi_envoyes', K_APP = 'tbtb_appareil', K_DEL = 'tbtb_suivi_supprimes';
   const $ = id => document.getElementById(id);
   const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const set = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
@@ -15,6 +15,15 @@
   const recus = () => { try { const v = JSON.parse(get(K_RECUS)); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
   const envoyes = () => { try { return new Set(JSON.parse(get(K_OK)) || []); } catch (e) { return new Set(); } };
   const attente = () => { const ok = envoyes(); return recus().filter(r => r && r.num && !ok.has(r.num)); };
+  /* Reçus supprimés de la caisse, à retirer aussi du suivi */
+  const aSupprimer = () => { try { const v = JSON.parse(get(K_DEL)); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  window.TBTB_SUIVI = {
+    supprimer(nums) {
+      const ok = envoyes(), l = new Set(aSupprimer());
+      nums.forEach(n => { if (ok.has(n)) l.add(n); });
+      set(K_DEL, JSON.stringify([...l])); setTimeout(push, 300);
+    }
+  };
 
   let busy = false, lastErr = '', lastOk = null;
 
@@ -38,12 +47,17 @@
 
   async function push() {
     if (busy || !get(K_JETON)) { ui(); return; }
-    const list = attente(); if (!list.length) { lastErr = ''; ui(); return; }
+    const list = attente(), dels = aSupprimer(); if (!list.length && !dels.length) { lastErr = ''; ui(); return; }
     busy = true; ui();
     try {
       for (let i = 0; i < list.length; i += 100) {
         const d = await call('/api/recus', { appareil, recus: list.slice(i, i + 100) });
         const ok = envoyes(); (d.ok || []).forEach(n => ok.add(n)); set(K_OK, JSON.stringify([...ok]));
+      }
+      for (let i = 0; i < dels.length; i += 200) {
+        const part = dels.slice(i, i + 200);
+        await call('/api/recus/supprimer', { appareil, nums: part });
+        const reste = new Set(aSupprimer()); part.forEach(n => reste.delete(n)); set(K_DEL, JSON.stringify([...reste]));
       }
       lastErr = ''; lastOk = new Date();
     } catch (e) { lastErr = e.message; }
@@ -52,11 +66,12 @@
 
   function ui() {
     if (!$('sy-etat')) return;
-    const on = !!get(K_JETON), n = attente().length, e = $('sy-etat');
+    const on = !!get(K_JETON), n = attente().length, nd = aSupprimer().length, e = $('sy-etat');
     $('sy-form').hidden = on; $('sy-actions').hidden = !on;
     if (!on) { e.className = 'msg'; e.textContent = 'Caisse non connectée au suivi. Entrez l\'email et le mot de passe du gérant pour envoyer les reçus sur internet.'; return; }
     if (busy) { e.className = 'msg'; e.textContent = `Envoi de ${n} reçu${n > 1 ? 's' : ''} en cours…`; return; }
-    if (lastErr) { e.className = 'msg err'; e.textContent = `${n} reçu${n > 1 ? 's' : ''} en attente d'envoi (${lastErr}). Nouvel essai automatique dans 1 minute.`; return; }
+    if (lastErr) { e.className = 'msg err'; e.textContent = `${n || !nd ? n + ' reçu' + (n > 1 ? 's' : '') : nd + ' suppression' + (nd > 1 ? 's' : '')} en attente d'envoi (${lastErr}). Nouvel essai automatique dans 1 minute.`; return; }
+    if (!n && nd) { e.className = 'msg'; e.textContent = `${nd} suppression${nd > 1 ? 's' : ''} en attente d'envoi au suivi.`; return; }
     e.className = 'msg ok';
     e.textContent = n ? `${n} reçu${n > 1 ? 's' : ''} en attente d'envoi.` : 'Suivi à distance actif : tous les reçus sont envoyés' + (lastOk ? ' (dernier envoi à ' + lastOk.toTimeString().slice(0, 5) + ').' : '.');
   }

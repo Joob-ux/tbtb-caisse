@@ -219,14 +219,17 @@ function renderHist() {
 /* Recherche : nom du client (une partie du nom suffit) et/ou dates du… au….
    Les noms sont comparés sans majuscules, accents ni espaces en trop (« Diop » = « diop »). */
 const normNom = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+/* Destination : clé de comparaison. Les anciens reçus « S’enthiou Bambay » comptent avec « S’enthiou Bambaye » */
+const ANCIENNES_VILLES = { "s'enthiou bambay": "s'enthiou bambaye" };
+const destKey = s => { const k = normNom(s).replace(/[’‘`]/g, "'"); return ANCIENNES_VILLES[k] || k; };
 const jour = v => { const d = new Date(v); return isNaN(d) ? '' : toLocalInput(d).slice(0, 10); };
 function filtre() {
-  const key = normNom($('g-nom').value), dest = normNom($('g-dest').value);
+  const key = normNom($('g-nom').value), dest = destKey($('g-dest').value);
   let du = $('g-du').value, au = $('g-au').value;
   if (du && au && du > au) [du, au] = [au, du];
   return recus.map((r, i) => ({ r, i })).filter(({ r }) => {
     const j = jour(r.date);
-    return (!key || normNom(r.nom).includes(key)) && (!dest || normNom(r.dest) === dest) && (!du || j >= du) && (!au || j <= au);
+    return (!key || normNom(r.nom).includes(key)) && (!dest || destKey(r.dest) === dest) && (!du || j >= du) && (!au || j <= au);
   });
 }
 const totaux = items => ({ colis: items.reduce((s, r) => s + (parseInt(r.colis) || 0), 0), somme: items.reduce((s, r) => s + (Number(r.somme) || 0), 0) });
@@ -243,8 +246,8 @@ function renderGroupe(list) {
   list = list || filtre().map(x => x.r);
   /* Liste des destinations : celles de la caisse, puis les autres déjà utilisées dans les reçus */
   const sel = $('g-dest'), choix = sel.value, villes = new Map();
-  [...$('f-dest-sel').options].forEach(o => { if (o.value && o.value !== '*') villes.set(normNom(o.value), o.value); });
-  recus.forEach(r => { const k = normNom(r.dest); if (k && !villes.has(k)) villes.set(k, r.dest); });
+  [...$('f-dest-sel').options].forEach(o => { if (o.value && o.value !== '*') villes.set(destKey(o.value), o.value); });
+  recus.forEach(r => { const k = destKey(r.dest); if (k && !villes.has(k)) villes.set(k, r.dest); });
   sel.innerHTML = '<option value="">Toutes les destinations</option>' + [...villes.values()].map(v => `<option>${esc(v)}</option>`).join('');
   sel.value = choix;
   const names = new Map(); recus.forEach(r => { const k = normNom(r.nom); if (k && !names.has(k)) names.set(k, r.nom); });
@@ -282,6 +285,8 @@ function supprimer(list) {
   }
   save();   // garde le dernier numéro avant de supprimer
   const del = new Set(list.map(r => r.num)); recus = recus.filter(r => !del.has(r.num)); save();
+  /* Les reçus déjà envoyés sont aussi retirés du suivi à distance (envoi dès qu'il y a internet) */
+  if (window.TBTB_SUIVI) window.TBTB_SUIVI.supprimer(list.map(r => r.num));
   renderHist(); s.className = 'msg ok'; s.textContent = `${list.length} reçu${list.length > 1 ? 's supprimés' : ' supprimé'} de cette caisse.`;
 }
 $('g-del').onclick = () => { const list = filtre().map(x => x.r); if (!list.length) return;
