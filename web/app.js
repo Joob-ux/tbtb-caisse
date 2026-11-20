@@ -271,7 +271,7 @@ function confirmer(btn, label, action) {
 /* Reçus pas encore partis vers le suivi à distance (seulement si la caisse y est connectée) */
 function nonEnvoyes(list) {
   try {
-    if (!localStorage.getItem('tbtb_suivi_jeton')) return [];
+    if (!localStorage.getItem('tbtb_suivi_actif') && !localStorage.getItem('tbtb_suivi_jeton')) return [];
     const ok = new Set(JSON.parse(localStorage.getItem('tbtb_suivi_envoyes')) || []);
     return list.filter(r => !ok.has(r.num));
   } catch (e) { return []; }
